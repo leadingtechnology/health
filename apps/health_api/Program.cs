@@ -11,12 +11,22 @@ var builder = WebApplication.CreateBuilder(args);
 // Configuration
 var config = builder.Configuration;
 
-// DbContext (SQLite for dev; switch to Postgres in prod if needed)
+// DbContext (auto-detect provider by connection string)
 builder.Services.AddDbContext<HealthDbContext>(opt =>
 {
-    var cs = config.GetConnectionString("Default") ?? "Data Source=./data/health.db";
-    Directory.CreateDirectory("./data");
-    opt.UseSqlite(cs);
+    var cs = config.GetConnectionString("Default");
+    if (!string.IsNullOrWhiteSpace(cs) && cs.Contains("Host=", StringComparison.OrdinalIgnoreCase))
+    {
+        // PostgreSQL connection string provided
+        opt.UseNpgsql(cs);
+    }
+    else
+    {
+        // Fallback to local SQLite for development
+        cs ??= "Data Source=./data/health.db";
+        Directory.CreateDirectory("./data");
+        opt.UseSqlite(cs);
+    }
 });
 
 // CORS
@@ -99,11 +109,14 @@ app.MapControllers();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// Auto-create DB for dev
+// Auto-create DB for dev (SQLite only). Skip for Postgres to avoid schema conflicts
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<HealthDbContext>();
-    db.Database.EnsureCreated();
+    if (db.Database.IsSqlite())
+    {
+        db.Database.EnsureCreated();
+    }
 }
 
 app.Run();

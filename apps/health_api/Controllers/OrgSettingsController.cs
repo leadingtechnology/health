@@ -32,7 +32,7 @@ namespace health_api.Controllers
             var ak = await _db.ApiKeys.Where(k => k.Provider == "openai").OrderByDescending(k => k.CreatedAt).FirstOrDefaultAsync();
             if (ak == null) return Ok(new { configured = false });
             var plain = _enc.Decrypt(ak.EncryptedValue);
-            var masked = plain.Length <= 8 ? "****" : $"{plain[..4]}****{plain[^4:]}";
+            var masked = plain.Length <= 8 ? "****" : $"{plain[..4]}****{plain[^4..]}";
             return Ok(new { configured = true, name = ak.Name, masked });
         }
 
