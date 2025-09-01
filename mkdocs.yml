@@ -1,0 +1,13 @@
+site_name: LDETCH Health
+theme:
+  name: material
+nav:
+  - 首页: docs/index.md
+  - 架构: docs/architecture.md
+  - 后端 API: docs/api/README.md
+  - 前端 App: docs/frontend/README.md
+  - 安全与合规: docs/security.md
+  - 发布与运维: docs/release.md
+  - 贡献指南: docs/contributing.md
+plugins:
+  - search
