@@ -5,28 +5,39 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using health_api.Data;
 using health_api.Services;
+using DotNetEnv;
+
+// Load environment variables from .env file
+var envFile = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production" 
+    ? ".env.production" 
+    : ".env.development";
+
+if (File.Exists(envFile))
+{
+    Env.Load(envFile);
+}
+else if (File.Exists(".env"))
+{
+    Env.Load(".env");
+}
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Override configuration with environment variables
+builder.Configuration.AddEnvironmentVariables();
 
 // Configuration
 var config = builder.Configuration;
 
-// DbContext (auto-detect provider by connection string)
+// DbContext (PostgreSQL only via ConnectionStrings:DefaultConnection)
 builder.Services.AddDbContext<HealthDbContext>(opt =>
 {
-    var cs = config.GetConnectionString("Default");
-    if (!string.IsNullOrWhiteSpace(cs) && cs.Contains("Host=", StringComparison.OrdinalIgnoreCase))
-    {
-        // PostgreSQL connection string provided
-        opt.UseNpgsql(cs);
-    }
-    else
-    {
-        // Fallback to local SQLite for development
-        cs ??= "Data Source=./data/health.db";
-        Directory.CreateDirectory("./data");
-        opt.UseSqlite(cs);
-    }
+    var cs = config.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(cs))
+        throw new Exception("Missing ConnectionStrings:DefaultConnection. Please configure your PostgreSQL connection string.");
+
+    opt.UseNpgsql(cs);
+    opt.EnableDetailedErrors();
 });
 
 // CORS
@@ -70,6 +81,7 @@ builder.Services.AddScoped<JwtService>();
 builder.Services.AddSingleton<EncryptionService>();
 builder.Services.AddScoped<OpenAIService>();
 builder.Services.AddScoped<QuotaService>();
+builder.Services.AddScoped<OtpService>();
 
 builder.Services.AddControllers().AddJsonOptions(o =>
 {
@@ -109,14 +121,101 @@ app.MapControllers();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// Auto-create DB for dev (SQLite only). Skip for Postgres to avoid schema conflicts
+// Startup info and DB connectivity check
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<HealthDbContext>();
-    if (db.Database.IsSqlite())
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    // Display startup information in development
+    if (app.Environment.IsDevelopment())
     {
-        db.Database.EnsureCreated();
+        Console.WriteLine("\n========================================");
+        Console.WriteLine("  Health API - Development Environment");
+        Console.WriteLine("========================================\n");
+
+        // Database connection info
+        try
+        {
+            var connectionString = config.GetConnectionString("DefaultConnection") ?? "(not set)";
+            Console.WriteLine("?? Database Information:");
+            Console.WriteLine($"   Provider: PostgreSQL");
+
+            // Extract details from PostgreSQL connection string (avoid printing password)
+            var hostMatch = System.Text.RegularExpressions.Regex.Match(connectionString, @"Host=([^;]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var portMatch = System.Text.RegularExpressions.Regex.Match(connectionString, @"Port=([^;]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var dbMatch   = System.Text.RegularExpressions.Regex.Match(connectionString, @"Database=([^;]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var userMatch = System.Text.RegularExpressions.Regex.Match(connectionString, @"(?:Username|User Id|UserID)=([^;]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var schemaMatch = System.Text.RegularExpressions.Regex.Match(connectionString, @"(?:Search Path|SearchPath|Schema)=([^;]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            if (hostMatch.Success)   Console.WriteLine($"   Host: {hostMatch.Groups[1].Value}");
+            if (portMatch.Success)   Console.WriteLine($"   Port: {portMatch.Groups[1].Value}");
+            if (dbMatch.Success)     Console.WriteLine($"   Database: {dbMatch.Groups[1].Value}");
+            if (userMatch.Success)   Console.WriteLine($"   User: {userMatch.Groups[1].Value}");
+            if (schemaMatch.Success) Console.WriteLine($"   Schema: {schemaMatch.Groups[1].Value}");
+
+            // Test database connection and report detailed errors
+            try
+            {
+                var providerName = db.Database.ProviderName;
+                using var conn = db.Database.GetDbConnection();
+                conn.Open();
+                Console.WriteLine("   Status: ✅ Connected successfully");
+                Console.WriteLine($"   Provider Name: {providerName}");
+                Console.WriteLine($"   Server Version: {conn.ServerVersion}");
+                conn.Close();
+            }
+            catch (Exception openEx)
+            {
+                Console.WriteLine("   Status: ❌ Connection failed");
+                Console.WriteLine($"   Error: {openEx.GetType().Name}: {openEx.Message}");
+                if (openEx.InnerException != null)
+                    Console.WriteLine($"   Inner: {openEx.InnerException.GetType().Name}: {openEx.InnerException.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"   Status: ❌ Error: {ex.Message}");
+        }
+
+        Console.WriteLine();
+
+        // API Endpoints information
+        var urls = app.Urls.Any() ? string.Join(", ", app.Urls) : $"http://localhost:{config["Urls"]?.Split(':').Last() ?? "5000"}";
+        Console.WriteLine("?? API Endpoints:");
+        Console.WriteLine($"   Base URL: {urls}");
+        Console.WriteLine($"   Swagger UI: {urls}/swagger");
+        Console.WriteLine($"   Swagger JSON: {urls}/swagger/v1/swagger.json");
+
+        Console.WriteLine();
+        Console.WriteLine("?? Authentication:");
+        Console.WriteLine($"   Type: JWT Bearer");
+        Console.WriteLine($"   Issuer: {jwtIssuer ?? "Not configured"}");
+        Console.WriteLine($"   Audience: {jwtAudience ?? "Not configured"}");
+
+        Console.WriteLine();
+        Console.WriteLine("?? CORS Configuration:");
+        var corsOrigins = config.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:5173" };
+        foreach (var origin in corsOrigins)
+        {
+            Console.WriteLine($"   Allowed: {origin}");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("? Key Features:");
+        Console.WriteLine("   ? User registration & JWT authentication");
+        Console.WriteLine("   ? Daily quota management (3 free questions/day)");
+        Console.WriteLine("   ? Care circles & patient management");
+        Console.WriteLine("   ? OpenAI API proxy with encrypted key storage");
+        Console.WriteLine("   ? Conversation sharing & permissions");
+
+        Console.WriteLine();
+        Console.WriteLine("========================================");
+        Console.WriteLine($"?? Server is running at {urls}");
+        Console.WriteLine("   Press Ctrl+C to stop");
+        Console.WriteLine("========================================\n");
     }
 }
 
 app.Run();
+

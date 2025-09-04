@@ -7,9 +7,11 @@
 
 1. **在 Cloud SQL 创建 PostgreSQL 实例与数据库**（PostgreSQL 13+）。  
 2. 使用 `psql` 或 Cloud SQL 控制台执行：
+
    ```sql
    \i health_postgres.sql
    ```
+
 3. 在后端连接串中使用该数据库；为应用账号授予文末的 `GRANT` 示例权限。
 
 ## 关键设计要点
@@ -52,6 +54,7 @@
 ## 审计用法示例
 
 在后端每个写操作开始的事务里执行：
+
 ```sql
 SET LOCAL app.user_id = '00000000-0000-0000-0000-000000000000';
 -- 之后进行 INSERT/UPDATE/DELETE，将自动写入 audit_log
@@ -60,7 +63,7 @@ SET LOCAL app.user_id = '00000000-0000-0000-0000-000000000000';
 ## 下一步可选增强
 
 - 开启 **Row‑Level Security (RLS)** 并建立 policy（需要连接会话中设置 `app.user_id`，并使用 `SECURITY DEFINER` 函数封装访问）。  
-- 引入 ** documents/document_references ** 表，管理 PDF 物理存储与 FHIR 元数据映射。  
+- 引入 **documents/document_references** 表，管理 PDF 物理存储与 FHIR 元数据映射。  
 - 针对共享访问设计 **materialized view** 加速授权查询。
 
 ---

@@ -3,8 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 import '../l10n/gen/app_localizations.dart';
+import '../services/api_service.dart';
+import '../services/auth_service.dart';
 
 class AppState extends ChangeNotifier {
+  final ApiService _api = ApiService();
+  final AuthService _auth = AuthService();
+  
+  User? currentUser;
+  bool isAuthenticated = false;
+  
   Plan plan = Plan.free;
   ModelTier modelTier = ModelTier.basic;
 
@@ -26,6 +34,20 @@ class AppState extends ChangeNotifier {
   ];
 
   Future<void> bootstrap() async {
+    // Initialize API service
+    await _api.initialize();
+    
+    // Check if user is authenticated
+    if (_api.isAuthenticated) {
+      final result = await _auth.fetchCurrentUser();
+      if (result.success && result.user != null) {
+        currentUser = result.user;
+        isAuthenticated = true;
+        plan = result.user!.plan;
+        modelTier = result.user!.modelTier;
+      }
+    }
+    
     final prefs = await SharedPreferences.getInstance();
     usedToday = prefs.getInt('usedToday') ?? 0;
     final last = prefs.getString('lastAskDay');
@@ -184,6 +206,17 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> logout() async {
+    await _auth.logout();
+    currentUser = null;
+    isAuthenticated = false;
+    plan = Plan.free;
+    modelTier = ModelTier.basic;
+    messages.clear();
+    tasks.clear();
+    notifyListeners();
+  }
+  
   Future<AskResult> ask(String text) async {
     resetIfNewDay();
     if (plan == Plan.free && usedToday >= dailyLimitFree) {

@@ -3,8 +3,14 @@ using health_api.Models;
 
 namespace health_api.DTOs
 {
-    public record RegisterRequest([Required, EmailAddress] string Email, [Required, MinLength(6)] string Password, [Required] string Name);
-    public record LoginRequest([Required, EmailAddress] string Email, [Required] string Password);
+    // Legacy password-based auth (deprecated)
+    public record RegisterRequest([EmailAddress] string? Email, [Phone] string? Phone, [MinLength(6)] string? Password, string Name = "");
+    public record LoginRequest([EmailAddress] string? Email, [Phone] string? Phone, string? Password);
+
+    // OTP-based auth
+    public record OtpLoginRequest(string? Email, string? Phone, string? Purpose = "login");
+    public record OtpVerifyRequest(string? Email, string? Phone, [Required] string Code, string? Purpose = "login");
+    public record OtpResponse(Guid OtpId, string Identifier, DateTime ExpiresAt, string? Code = null); // Code only returned in dev/test
 
     public record TokenResponse(string AccessToken, DateTime ExpiresAt, string Plan, string ModelTier, string Name, string Email);
 
@@ -23,4 +29,7 @@ namespace health_api.DTOs
     public record OpenAIKeyUpsertRequest([Required] string KeyName, [Required] string ApiKeyPlain);
     public record OpenAIAskRequest([Required] string Prompt, string? Model);
     public record OpenAIAskResponse(string ReplyText, string ModelUsed, int TokensInput, int TokensOutput);
+
+    public record TaskUpsertRequest([Required] string Title, [Required] DateTime DueAt, Guid? PatientId, string? Notes, string? Category);
+    public record TaskResponse(Guid Id, string Title, DateTime DueAt, Guid? PatientId, string? Notes, string? Category, bool IsDone, DateTime CreatedAt);
 }

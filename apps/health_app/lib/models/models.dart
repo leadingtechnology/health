@@ -3,6 +3,24 @@ import 'package:flutter/material.dart';
 enum Plan { free, standard, pro }
 enum ModelTier { basic, enhanced, realtime }
 
+class User {
+  final String? email;
+  final String? phone;
+  final String name;
+  final Plan plan;
+  final ModelTier modelTier;
+  
+  User({
+    this.email,
+    this.phone,
+    required this.name,
+    required this.plan,
+    required this.modelTier,
+  });
+  
+  String get identifier => email ?? phone ?? '';
+}
+
 class Message {
   final String id;
   final bool fromUser;

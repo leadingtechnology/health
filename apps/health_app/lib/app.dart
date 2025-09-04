@@ -9,6 +9,7 @@ import 'pages/task_edit_page.dart';
 import 'pages/logs_page.dart';
 import 'pages/circle_page.dart';
 import 'pages/settings_page.dart';
+import 'pages/auth/login_page.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/gen/app_localizations.dart';
 
@@ -51,9 +52,17 @@ class MyApp extends StatelessWidget {
           child: child!,
         );
       },
+      home: Consumer<AppState>(
+        builder: (context, appState, _) {
+          if (!appState.isAuthenticated) {
+            return const LoginPage();
+          }
+          return const AppShell();
+        },
+      ),
       routes: {
-        '/': (_) => const AppShell(),
         '/tasks/edit': (_) => const TaskEditPage(),
+        '/login': (_) => const LoginPage(),
       },
     );
   }

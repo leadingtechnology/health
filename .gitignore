@@ -32,6 +32,7 @@ bld/
 project.lock.json
 project.fragment.lock.json
 artifacts/
+nul
 
 ## ASP.NET Scaffolding
 ScaffoldingReadMe.txt
@@ -224,10 +225,16 @@ $RECYCLE.BIN/
 
 # Environment files
 .env
+.env.*
+!.env.example
+!.env.*.example
 .env.local
+.env.development
+.env.production
 .env.development.local
 .env.test.local
 .env.production.local
+*.env
 
 # Editor directories and files
 .idea/
