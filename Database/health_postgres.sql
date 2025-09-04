@@ -14,6 +14,7 @@
 --    API key storage (app-layer encrypted), tasks, OTP for phone & email, helper functions.
 -- ============================================================
 DO $$
+-- SET app.env = 'dev';
 BEGIN
   IF current_setting('app.env', true) = 'dev' THEN
     EXECUTE 'DROP SCHEMA IF EXISTS health CASCADE';

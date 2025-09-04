@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../state/app_state.dart';
+import '../../models/models.dart';
 
 class OtpVerifyPage extends StatefulWidget {
   final String identifier;
@@ -100,6 +101,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
     });
     
     try {
+      // Call the real backend API for OTP verification
       final result = await _authService.verifyOtp(
         email: widget.isEmail ? widget.identifier : null,
         phone: !widget.isEmail ? widget.identifier : null,
@@ -107,10 +109,14 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
       );
       
       if (result.success) {
-        // Update app state with user info
+        // Update app state with user info and token
         if (!mounted) return;
         final appState = Provider.of<AppState>(context, listen: false);
+        
+        // Store user information
         if (result.user != null) {
+          appState.currentUser = result.user;
+          appState.isAuthenticated = true;
           await appState.setPlan(result.user!.plan);
           await appState.setModelTier(result.user!.modelTier);
         }
@@ -123,9 +129,10 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
           _errorMessage = result.error ?? 'Invalid or expired code';
         });
       }
+      
     } catch (e) {
       setState(() {
-        _errorMessage = 'Network error. Please try again.';
+        _errorMessage = 'Cannot connect to server. Please check your connection.';
       });
     } finally {
       if (mounted) {

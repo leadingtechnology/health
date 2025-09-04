@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Net;
 using System.Text.Json.Serialization;
 
 namespace health_api.Models
@@ -124,7 +125,7 @@ namespace health_api.Models
         public DateTime ExpiresAt { get; set; }
         public DateTime? ConsumedAt { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public string? CreatedIp { get; set; }
+        public IPAddress? CreatedIp { get; set; }
         public string? UserAgent { get; set; }
     }
 
@@ -139,7 +140,7 @@ namespace health_api.Models
         public DateTime ExpiresAt { get; set; }
         public DateTime? ConsumedAt { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public string? CreatedIp { get; set; }
+        public IPAddress? CreatedIp { get; set; }
         public string? UserAgent { get; set; }
     }
 }

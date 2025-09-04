@@ -63,7 +63,7 @@ gcloud sql connect racketrallydb --user=postgres --database=postgres --project=l
 
 # Initialize database
 \encoding UTF8
-\i D:/ldtech/health/halth/Database/health_postgres.sql
+\i D:/ldtech/health/health/Database/health_postgres.sql
 
 # Switch to health database
 \c racketrally

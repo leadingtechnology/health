@@ -24,6 +24,17 @@ namespace health_api.Data
             // Configure schema
             b.HasDefaultSchema("health");
 
+            // Configure table names to be lowercase
+            b.Entity<User>().ToTable("users");
+            b.Entity<CareCircle>().ToTable("care_circles");
+            b.Entity<CareCircleMember>().ToTable("care_circle_members");
+            b.Entity<Patient>().ToTable("patients");
+            b.Entity<Conversation>().ToTable("conversations");
+            b.Entity<ShareGrant>().ToTable("share_grants");
+            b.Entity<QuotaUsage>().ToTable("quota_usages");
+            b.Entity<ApiKeySecret>().ToTable("api_key_secrets");
+            b.Entity<Models.Task>().ToTable("tasks");
+
             // User indexes - email and phone can be null but must be unique when not null
             b.Entity<User>()
                 .HasIndex(u => u.Email)
@@ -38,14 +49,20 @@ namespace health_api.Data
                 .HasDatabaseName("ux_users_phone_active");
 
             // Map property names to database columns
+            b.Entity<User>().Property(u => u.Id).HasColumnName("id");
+            b.Entity<User>().Property(u => u.Email).HasColumnName("email");
+            b.Entity<User>().Property(u => u.Name).HasColumnName("name");
+            b.Entity<User>().Property(u => u.Role).HasColumnName("role");
             b.Entity<User>().Property(u => u.PhoneE164).HasColumnName("phone_e164");
             b.Entity<User>().Property(u => u.TimeZone).HasColumnName("time_zone");
             b.Entity<User>().Property(u => u.PasswordHash).HasColumnName("password_hash");
             b.Entity<User>().Property(u => u.CreatedAt).HasColumnName("created_at");
             b.Entity<User>().Property(u => u.UpdatedAt).HasColumnName("updated_at");
             b.Entity<User>().Property(u => u.DeletedAt).HasColumnName("deleted_at");
-            b.Entity<User>().Property(u => u.ModelTier).HasColumnName("model_tier").HasConversion<string>();
-            b.Entity<User>().Property(u => u.Plan).HasConversion<string>();
+            
+            // PostgreSQL enum types are now mapped at the data source level in Program.cs
+            b.Entity<User>().Property(u => u.Plan).HasColumnName("plan");
+            b.Entity<User>().Property(u => u.ModelTier).HasColumnName("model_tier");
 
             b.Entity<CareCircleMember>().HasIndex(m => new { m.CareCircleId, m.UserId }).IsUnique();
             b.Entity<QuotaUsage>().HasIndex(q => new { q.UserId, q.Date }).IsUnique();
@@ -62,9 +79,12 @@ namespace health_api.Data
 
             // OTP tables configuration
             b.Entity<PhoneOtp>().ToTable("phone_otp");
+            b.Entity<PhoneOtp>().Property(o => o.Id).HasColumnName("id");
             b.Entity<PhoneOtp>().Property(o => o.PhoneE164).HasColumnName("phone_e164");
+            b.Entity<PhoneOtp>().Property(o => o.Purpose).HasColumnName("purpose");
             b.Entity<PhoneOtp>().Property(o => o.CodeHash).HasColumnName("code_hash");
             b.Entity<PhoneOtp>().Property(o => o.CodeSalt).HasColumnName("code_salt");
+            b.Entity<PhoneOtp>().Property(o => o.Attempts).HasColumnName("attempts");
             b.Entity<PhoneOtp>().Property(o => o.ExpiresAt).HasColumnName("expires_at");
             b.Entity<PhoneOtp>().Property(o => o.ConsumedAt).HasColumnName("consumed_at");
             b.Entity<PhoneOtp>().Property(o => o.CreatedAt).HasColumnName("created_at");
@@ -72,8 +92,12 @@ namespace health_api.Data
             b.Entity<PhoneOtp>().Property(o => o.UserAgent).HasColumnName("user_agent");
 
             b.Entity<EmailOtp>().ToTable("email_otp");
+            b.Entity<EmailOtp>().Property(o => o.Id).HasColumnName("id");
+            b.Entity<EmailOtp>().Property(o => o.Email).HasColumnName("email");
+            b.Entity<EmailOtp>().Property(o => o.Purpose).HasColumnName("purpose");
             b.Entity<EmailOtp>().Property(o => o.CodeHash).HasColumnName("code_hash");
             b.Entity<EmailOtp>().Property(o => o.CodeSalt).HasColumnName("code_salt");
+            b.Entity<EmailOtp>().Property(o => o.Attempts).HasColumnName("attempts");
             b.Entity<EmailOtp>().Property(o => o.ExpiresAt).HasColumnName("expires_at");
             b.Entity<EmailOtp>().Property(o => o.ConsumedAt).HasColumnName("consumed_at");
             b.Entity<EmailOtp>().Property(o => o.CreatedAt).HasColumnName("created_at");

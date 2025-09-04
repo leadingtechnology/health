@@ -35,6 +35,8 @@ class _LoginPageState extends State<LoginPage> {
     
     try {
       final identifier = _identifierController.text.trim();
+      
+      // Call the real backend API
       final result = await _authService.sendOtp(
         email: _isEmail ? identifier : null,
         phone: !_isEmail ? identifier : null,
@@ -48,7 +50,7 @@ class _LoginPageState extends State<LoginPage> {
             builder: (context) => OtpVerifyPage(
               identifier: result.identifier ?? identifier,
               isEmail: _isEmail,
-              debugCode: result.debugCode, // For testing in dev mode
+              debugCode: result.debugCode, // For testing in development
             ),
           ),
         );
@@ -57,9 +59,10 @@ class _LoginPageState extends State<LoginPage> {
           _errorMessage = result.error ?? 'Failed to send OTP';
         });
       }
+      
     } catch (e) {
       setState(() {
-        _errorMessage = 'Network error. Please try again.';
+        _errorMessage = 'Cannot connect to server. Please check your connection.';
       });
     } finally {
       if (mounted) {

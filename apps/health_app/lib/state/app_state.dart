@@ -15,6 +15,10 @@ class AppState extends ChangeNotifier {
   
   Plan plan = Plan.free;
   ModelTier modelTier = ModelTier.basic;
+  
+  // Getters for user information
+  String? get userName => currentUser?.name;
+  String? get userEmail => currentUser?.email;
 
   int dailyLimitFree = 3;
   int usedToday = 0;

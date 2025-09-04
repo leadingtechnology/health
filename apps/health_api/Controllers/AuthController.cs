@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using BCrypt.Net;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using health_api.Data;
@@ -17,13 +18,15 @@ namespace health_api.Controllers
         private readonly JwtService _jwt;
         private readonly OtpService _otp;
         private readonly ILogger<AuthController> _logger;
+        private readonly IWebHostEnvironment _env;
         
-        public AuthController(HealthDbContext db, JwtService jwt, OtpService otp, ILogger<AuthController> logger) 
+        public AuthController(HealthDbContext db, JwtService jwt, OtpService otp, ILogger<AuthController> logger, IWebHostEnvironment env) 
         { 
             _db = db; 
             _jwt = jwt; 
             _otp = otp;
             _logger = logger;
+            _env = env;
         }
 
         [HttpPost("register")]
@@ -104,7 +107,7 @@ namespace health_api.Controllers
                     _logger.LogInformation($"Email OTP {code} sent to {identifier}");
                     
                     // In development/test, return the code directly
-                    var isDev = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
+                    var isDev = _env.IsDevelopment();
                     return new OtpResponse(otpId, identifier, expiresAt, isDev ? code : null);
                 }
                 else if (!string.IsNullOrWhiteSpace(req.Phone))
@@ -115,7 +118,7 @@ namespace health_api.Controllers
                     _logger.LogInformation($"Phone OTP {code} sent to {identifier}");
                     
                     // In development/test, return the code directly
-                    var isDev = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
+                    var isDev = _env.IsDevelopment();
                     return new OtpResponse(otpId, identifier, expiresAt, isDev ? code : null);
                 }
                 else
@@ -126,6 +129,17 @@ namespace health_api.Controllers
             catch (ArgumentException ex)
             {
                 return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                // Provide clearer diagnostics during development while keeping prod responses generic
+                var isDev = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
+                _logger.LogError(ex, "Failed to send OTP");
+                if (isDev)
+                {
+                    return StatusCode(500, new { error = $"Failed to send OTP: {ex.GetType().Name}: {ex.Message}" });
+                }
+                return StatusCode(500, new { error = "Failed to send OTP" });
             }
         }
 

@@ -88,25 +88,65 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    final titles = [t.navAssistant, t.navTasks, t.navLogs, t.navCircle, t.navSettings];
+    final theme = Theme.of(context);
+    
+    // Show FAB only on Tasks page
+    final showFab = _index == 1;
+    
     return Scaffold(
-      appBar: AppBar(
-        title: Text(titles[_index]),
-        actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none)),
-        ],
-      ),
       body: IndexedStack(index: _index, children: _pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        destinations: [
-          NavigationDestination(icon: const Icon(Icons.assistant), label: t.navAssistant),
-          NavigationDestination(icon: const Icon(Icons.check_circle_outlined), label: t.navTasks),
-          NavigationDestination(icon: const Icon(Icons.auto_graph), label: t.navLogs),
-          NavigationDestination(icon: const Icon(Icons.group_outlined), label: t.navCircle),
-          NavigationDestination(icon: const Icon(Icons.settings_outlined), label: t.navSettings),
-        ],
-        onDestinationSelected: (i) => setState(() => _index = i),
+      floatingActionButton: showFab
+          ? FloatingActionButton.extended(
+              onPressed: () => Navigator.of(context).pushNamed('/tasks/edit'),
+              elevation: 4,
+              icon: const Icon(Icons.add),
+              label: const Text('Add Task'),
+              backgroundColor: theme.colorScheme.primary,
+            )
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: theme.colorScheme.shadow.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: NavigationBar(
+          selectedIndex: _index,
+          height: 65,
+          destinations: [
+            NavigationDestination(
+              icon: const Icon(Icons.psychology_outlined),
+              selectedIcon: const Icon(Icons.psychology),
+              label: t.navAssistant,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.task_outlined),
+              selectedIcon: const Icon(Icons.task),
+              label: t.navTasks,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.insights_outlined),
+              selectedIcon: const Icon(Icons.insights),
+              label: t.navLogs,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.group_outlined),
+              selectedIcon: const Icon(Icons.group),
+              label: t.navCircle,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.settings_outlined),
+              selectedIcon: const Icon(Icons.settings),
+              label: t.navSettings,
+            ),
+          ],
+          onDestinationSelected: (i) => setState(() => _index = i),
+        ),
       ),
     );
   }

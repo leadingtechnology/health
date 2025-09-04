@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../models/models.dart';
 import '../l10n/gen/app_localizations.dart';
-import '../theme/app_theme.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -11,123 +10,410 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final plan = state.plan;
-    final model = state.modelTier;
     final t = AppLocalizations.of(context)!;
-    final code = state.locale?.languageCode ?? Localizations.localeOf(context).languageCode;
-    final largeTextLabel = code == 'ja'
-        ? '大きい文字'
-        : (code == 'zh' ? '大字号' : 'Large text');
+    final theme = Theme.of(context);
 
-    return ListView(
-      padding: const EdgeInsetsDirectional.fromSTEB(AppGaps.md, AppGaps.md, AppGaps.md, AppGaps.md),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            theme.colorScheme.primary.withOpacity(0.05),
+            theme.colorScheme.surface,
+          ],
+        ),
+      ),
+      child: CustomScrollView(
+        slivers: [
+          // Header
+          SliverToBoxAdapter(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.shadow.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Row(
+                  children: [
+                    // Settings icon
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            theme.colorScheme.primary,
+                            theme.colorScheme.secondary,
+                          ],
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.settings,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            t.settingsTitle,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Customize your experience',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Profile avatar
+                    CircleAvatar(
+                      backgroundColor: theme.colorScheme.primaryContainer,
+                      child: Text(
+                        state.userName?.isNotEmpty == true 
+                            ? state.userName![0].toUpperCase()
+                            : 'U',
+                        style: TextStyle(
+                          color: theme.colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Settings content
+          SliverPadding(
+            padding: const EdgeInsets.all(16),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                // Appearance Section
+                _buildSectionCard(
+                  context,
+                  title: t.displayTitle,
+                  icon: Icons.palette,
+                  children: [
+                    _buildSubsection(
+                      context,
+                      title: 'Theme Mode',
+                      child: _ThemeModeSelector(),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSubsection(
+                      context,
+                      title: 'Theme Color',
+                      child: _SeedColorPicker(),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSubsection(
+                      context,
+                      title: 'Text Size',
+                      child: _TextSizeSelector(),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Language Section
+                _buildSectionCard(
+                  context,
+                  title: t.settingsLanguage,
+                  icon: Icons.language,
+                  children: [
+                    _LanguageSelector(),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Subscription Section
+                _buildSectionCard(
+                  context,
+                  title: t.plansTitle,
+                  icon: Icons.diamond,
+                  gradient: true,
+                  children: [
+                    _PlanSelector(),
+                    const SizedBox(height: 16),
+                    _ModelTierSelector(),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Account Section
+                _buildSectionCard(
+                  context,
+                  title: 'Account',
+                  icon: Icons.person,
+                  children: [
+                    _buildAccountTile(
+                      context,
+                      title: 'Profile',
+                      subtitle: state.userEmail ?? 'Not logged in',
+                      icon: Icons.account_circle,
+                      onTap: () {},
+                    ),
+                    _buildAccountTile(
+                      context,
+                      title: 'Security',
+                      subtitle: 'Manage your security settings',
+                      icon: Icons.security,
+                      onTap: () {},
+                    ),
+                    _buildAccountTile(
+                      context,
+                      title: 'Notifications',
+                      subtitle: 'Configure alerts and reminders',
+                      icon: Icons.notifications,
+                      onTap: () {},
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // About Section
+                _buildSectionCard(
+                  context,
+                  title: 'About',
+                  icon: Icons.info,
+                  children: [
+                    _buildInfoTile(
+                      context,
+                      title: t.privacyTitle,
+                      subtitle: t.privacyDesc,
+                      icon: Icons.privacy_tip,
+                      onTap: () {},
+                    ),
+                    _buildInfoTile(
+                      context,
+                      title: 'Terms of Service',
+                      subtitle: 'Read our terms and conditions',
+                      icon: Icons.description,
+                      onTap: () {},
+                    ),
+                    _buildInfoTile(
+                      context,
+                      title: t.aboutTitle,
+                      subtitle: 'Version 1.0.0',
+                      icon: Icons.info_outline,
+                      onTap: () {},
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Sign Out Button
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      context.read<AppState>().logout();
+                      Navigator.of(context).pushReplacementNamed('/login');
+                    },
+                    icon: const Icon(Icons.logout),
+                    label: const Text('Sign Out'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: theme.colorScheme.error,
+                      foregroundColor: theme.colorScheme.onError,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 32),
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionCard(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+    bool gradient = false,
+  }) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        decoration: gradient
+            ? BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    theme.colorScheme.primaryContainer.withOpacity(0.5),
+                    theme.colorScheme.secondaryContainer.withOpacity(0.5),
+                  ],
+                ),
+              )
+            : null,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: theme.colorScheme.primary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ...children,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubsection(
+    BuildContext context, {
+    required String title,
+    required Widget child,
+  }) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(t.settingsTitle, style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: AppGaps.md),
-        Text(t.displayTitle, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: AppGaps.xs),
-        const _ThemeModeSelector(),
-        const SizedBox(height: AppGaps.xs),
-        SegmentedButton<bool>(
-          segments: [
-            ButtonSegment(value: false, label: Text(t.modeNormal), icon: const Icon(Icons.text_fields)),
-            ButtonSegment(value: true, label: Text(largeTextLabel), icon: const Icon(Icons.format_size)),
-          ],
-          selected: {state.elderMode},
-          onSelectionChanged: (s) => context.read<AppState>().setElderMode(s.first),
-        ),
-        const SizedBox(height: AppGaps.xs),
-        Text(t.fontAutoNote, style: TextStyle(color: Theme.of(context).colorScheme.outline)),
-        const SizedBox(height: AppGaps.xs),
         Text(
-          code == 'ja' ? 'テーマカラー' : (code == 'zh' ? '主题颜色' : 'Theme color'),
-          style: Theme.of(context).textTheme.titleMedium,
+          title,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w500,
+          ),
         ),
-        const SizedBox(height: AppGaps.xs),
-        const _SeedColorPicker(),
-        const SizedBox(height: AppGaps.md),
-        const Divider(height: 1),
-        const SizedBox(height: AppGaps.md),
-        Text(t.settingsLanguage, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: AppGaps.xs),
-        const _LanguageSelector(),
-        const SizedBox(height: AppGaps.md),
-        const Divider(height: 1),
-        const SizedBox(height: AppGaps.md),
-        Text(t.plansTitle, style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: AppGaps.xs),
-        _PlanCard(
-          title: t.planFreeTitle,
-          subtitle: t.planFreeSubtitle,
-          selected: plan == Plan.free,
-          onTap: () => context.read<AppState>().setPlan(Plan.free),
-        ),
-        _PlanCard(
-          title: t.planStandardTitle,
-          subtitle: t.planStandardSubtitle,
-          selected: plan == Plan.standard,
-          onTap: () => context.read<AppState>().setPlan(Plan.standard),
-        ),
-        _PlanCard(
-          title: t.planProTitle,
-          subtitle: t.planProSubtitle,
-          selected: plan == Plan.pro,
-          onTap: () => context.read<AppState>().setPlan(Plan.pro),
-        ),
-        const SizedBox(height: AppGaps.xs),
-        SegmentedButton<ModelTier>(
-          segments: [
-            ButtonSegment(value: ModelTier.basic, label: Text(t.modelBasic), icon: const Icon(Icons.speed_outlined)),
-            ButtonSegment(value: ModelTier.enhanced, label: Text(t.modelEnhanced), icon: const Icon(Icons.rocket_launch_outlined)),
-            ButtonSegment(value: ModelTier.realtime, label: Text(t.modelRealtime), icon: const Icon(Icons.bolt)),
-          ],
-          selected: {model},
-          onSelectionChanged: (s) => context.read<AppState>().setModelTier(s.first),
-        ),
-        const SizedBox(height: AppGaps.md),
-        const Divider(height: 1),
-        const SizedBox(height: AppGaps.md),
-        Text(t.readingPrivacyTitle, style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: AppGaps.xs),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(t.privacyTitle),
-          subtitle: Text(t.privacyDesc),
-          trailing: const Icon(Icons.privacy_tip_outlined),
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.privacyTitle)));
-          },
-        ),
-        const SizedBox(height: AppGaps.xs),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(t.aboutTitle),
-          subtitle: Text(t.aboutDesc),
-          trailing: const Icon(Icons.info_outline),
-        ),
+        const SizedBox(height: 8),
+        child,
       ],
     );
   }
-}
 
-class _PlanCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final bool selected;
-  final VoidCallback onTap;
-  const _PlanCard({required this.title, required this.subtitle, required this.selected, required this.onTap});
+  Widget _buildAccountTile(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, size: 20),
+      ),
+      title: Text(title),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(
+          color: theme.colorScheme.onSurfaceVariant,
+          fontSize: 12,
+        ),
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Card(
-      elevation: selected ? 1 : 0,
-      color: selected ? cs.primaryContainer : null,
-      child: ListTile(
-        title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: selected ? cs.onPrimaryContainer : null)),
-        subtitle: Text(subtitle, style: TextStyle(color: selected ? cs.onPrimaryContainer.withValues(alpha: .9) : null)),
-        trailing: selected ? const Icon(Icons.check_circle, color: Colors.green) : null,
-        onTap: onTap,
+  Widget _buildInfoTile(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: theme.colorScheme.onSurfaceVariant,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.open_in_new,
+              color: theme.colorScheme.onSurfaceVariant,
+              size: 16,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -139,15 +425,166 @@ class _ThemeModeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    final theme = Theme.of(context);
     final selected = state.themeMode;
-    return SegmentedButton<ThemeMode>(
-      segments: const [
-        ButtonSegment(value: ThemeMode.light, label: Text('Light'), icon: Icon(Icons.light_mode_outlined)),
-        ButtonSegment(value: ThemeMode.dark, label: Text('Dark'), icon: Icon(Icons.dark_mode_outlined)),
-        ButtonSegment(value: ThemeMode.system, label: Text('System'), icon: Icon(Icons.phone_iphone)),
-      ],
-      selected: {selected},
-      onSelectionChanged: (s) => context.read<AppState>().setThemeMode(s.first),
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildModeButton(
+              context,
+              mode: ThemeMode.light,
+              icon: Icons.light_mode,
+              label: 'Light',
+              selected: selected == ThemeMode.light,
+            ),
+          ),
+          Expanded(
+            child: _buildModeButton(
+              context,
+              mode: ThemeMode.dark,
+              icon: Icons.dark_mode,
+              label: 'Dark',
+              selected: selected == ThemeMode.dark,
+            ),
+          ),
+          Expanded(
+            child: _buildModeButton(
+              context,
+              mode: ThemeMode.system,
+              icon: Icons.phone_iphone,
+              label: 'System',
+              selected: selected == ThemeMode.system,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModeButton(
+    BuildContext context, {
+    required ThemeMode mode,
+    required IconData icon,
+    required String label,
+    required bool selected,
+  }) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: () => context.read<AppState>().setThemeMode(mode),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.all(4),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? theme.colorScheme.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: selected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant,
+              size: 20,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: selected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant,
+                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TextSizeSelector extends StatelessWidget {
+  const _TextSizeSelector();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final theme = Theme.of(context);
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildSizeButton(
+              context,
+              label: 'Normal',
+              icon: Icons.text_fields,
+              selected: !state.elderMode,
+              onTap: () => context.read<AppState>().setElderMode(false),
+            ),
+          ),
+          Expanded(
+            child: _buildSizeButton(
+              context,
+              label: 'Large',
+              icon: Icons.format_size,
+              selected: state.elderMode,
+              onTap: () => context.read<AppState>().setElderMode(true),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSizeButton(
+    BuildContext context, {
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.all(4),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? theme.colorScheme.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: selected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant,
+                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -158,23 +595,36 @@ class _LanguageSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    final theme = Theme.of(context);
+    
     String current = 'system';
     if (state.locale?.languageCode == 'en') current = 'en';
     if (state.locale?.languageCode == 'zh') current = 'zh';
     if (state.locale?.languageCode == 'ja') current = 'ja';
 
-    const items = [
-      DropdownMenuItem(value: 'system', child: Text('System default')),
-      DropdownMenuItem(value: 'en', child: Text('English')),
-      DropdownMenuItem(value: 'zh', child: Text('简体中文')),
-      DropdownMenuItem(value: 'ja', child: Text('日本語')),
-    ];
-
-    return DropdownButtonFormField<String>(
-      value: current,
-      isExpanded: true,
-      items: items,
-      onChanged: (v) => context.read<AppState>().setLocaleCode(v!),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.outline.withOpacity(0.2),
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: current,
+          isExpanded: true,
+          borderRadius: BorderRadius.circular(12),
+          items: const [
+            DropdownMenuItem(value: 'system', child: Text('🌐 System default')),
+            DropdownMenuItem(value: 'en', child: Text('🇺🇸 English')),
+            DropdownMenuItem(value: 'zh', child: Text('🇨🇳 简体中文')),
+            DropdownMenuItem(value: 'ja', child: Text('🇯🇵 日本語')),
+          ],
+          onChanged: (v) => context.read<AppState>().setLocaleCode(v!),
+        ),
+      ),
     );
   }
 }
@@ -185,7 +635,9 @@ class _SeedColorPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    final theme = Theme.of(context);
     final current = Color(state.seedColor);
+    
     const List<Color> seeds = [
       Colors.red,
       Colors.pink,
@@ -200,33 +652,300 @@ class _SeedColorPicker extends StatelessWidget {
       Colors.lime,
       Colors.orange,
     ];
+    
     return Wrap(
-      spacing: 12,
-      runSpacing: 12,
+      spacing: 8,
+      runSpacing: 8,
       children: [
         for (final c in seeds)
           GestureDetector(
             onTap: () => context.read<AppState>().setSeedColor(c),
-            child: Container(
-              width: 36,
-              height: 36,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
                 color: c,
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2)),
-                ],
                 border: Border.all(
-                  color: current.toARGB32() == c.toARGB32() ? Theme.of(context).colorScheme.onPrimaryContainer : Colors.transparent,
-                  width: 2,
+                  color: current.value == c.value 
+                      ? theme.colorScheme.outline
+                      : Colors.transparent,
+                  width: 3,
                 ),
+                boxShadow: current.value == c.value
+                    ? [
+                        BoxShadow(
+                          color: c.withOpacity(0.4),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
               ),
-              child: current.toARGB32() == c.toARGB32()
+              child: current.value == c.value
                   ? const Icon(Icons.check, color: Colors.white, size: 20)
                   : null,
             ),
           ),
       ],
+    );
+  }
+}
+
+class _PlanSelector extends StatelessWidget {
+  const _PlanSelector();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final t = AppLocalizations.of(context)!;
+    final currentPlan = state.plan;
+
+    return Column(
+      children: [
+        _buildPlanOption(
+          context,
+          plan: Plan.free,
+          title: t.planFreeTitle,
+          subtitle: t.planFreeSubtitle,
+          features: ['3 questions per day', 'Basic AI model'],
+          selected: currentPlan == Plan.free,
+        ),
+        const SizedBox(height: 8),
+        _buildPlanOption(
+          context,
+          plan: Plan.standard,
+          title: t.planStandardTitle,
+          subtitle: t.planStandardSubtitle,
+          features: ['50 questions per day', 'Enhanced AI model', 'Priority support'],
+          selected: currentPlan == Plan.standard,
+          recommended: true,
+        ),
+        const SizedBox(height: 8),
+        _buildPlanOption(
+          context,
+          plan: Plan.pro,
+          title: t.planProTitle,
+          subtitle: t.planProSubtitle,
+          features: ['Unlimited questions', 'All AI models', 'Premium features'],
+          selected: currentPlan == Plan.pro,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlanOption(
+    BuildContext context, {
+    required Plan plan,
+    required String title,
+    required String subtitle,
+    required List<String> features,
+    required bool selected,
+    bool recommended = false,
+  }) {
+    final theme = Theme.of(context);
+    
+    return GestureDetector(
+      onTap: () => context.read<AppState>().setPlan(plan),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: selected 
+              ? theme.colorScheme.primaryContainer.withOpacity(0.3)
+              : theme.colorScheme.surfaceVariant.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected 
+                ? theme.colorScheme.primary
+                : theme.colorScheme.outline.withOpacity(0.2),
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            title,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (recommended) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.secondary,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'RECOMMENDED',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: theme.colorScheme.onSecondary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (selected)
+                  Icon(
+                    Icons.check_circle,
+                    color: theme.colorScheme.primary,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...features.map((feature) => Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.check,
+                    size: 16,
+                    color: theme.colorScheme.primary.withOpacity(0.7),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    feature,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ModelTierSelector extends StatelessWidget {
+  const _ModelTierSelector();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final currentTier = state.modelTier;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'AI Model',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.all(4),
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildTierButton(
+                  context,
+                  tier: ModelTier.basic,
+                  label: t.modelBasic,
+                  icon: Icons.speed,
+                  selected: currentTier == ModelTier.basic,
+                ),
+              ),
+              Expanded(
+                child: _buildTierButton(
+                  context,
+                  tier: ModelTier.enhanced,
+                  label: t.modelEnhanced,
+                  icon: Icons.rocket_launch,
+                  selected: currentTier == ModelTier.enhanced,
+                ),
+              ),
+              Expanded(
+                child: _buildTierButton(
+                  context,
+                  tier: ModelTier.realtime,
+                  label: t.modelRealtime,
+                  icon: Icons.bolt,
+                  selected: currentTier == ModelTier.realtime,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTierButton(
+    BuildContext context, {
+    required ModelTier tier,
+    required String label,
+    required IconData icon,
+    required bool selected,
+  }) {
+    final theme = Theme.of(context);
+    
+    return GestureDetector(
+      onTap: () => context.read<AppState>().setModelTier(tier),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.all(2),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? theme.colorScheme.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: selected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant,
+              size: 18,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: selected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant,
+                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

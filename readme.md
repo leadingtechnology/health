@@ -5,7 +5,7 @@ gcloud sql connect racketrallydb --user=postgres --database=postgres --project=l
 SHOW client_encoding;
 \encoding UTF8
 \set ON_ERROR_STOP on
-\i D:/ldtech/health/halth/Database/health_postgres.sql
+\i D:/ldtech/health/health/Database/health_postgres.sql
 
 ### 数据库操作
 
@@ -23,7 +23,7 @@ SHOW search_path;
 CREATE DATABASE postgres;
 
 SET app.env = 'dev';
-\i D:/ldtech/health/halth/Database/health_postgres.sql
+\i D:/ldtech/health/health/Database/health_postgres.sql
 
 ### 1）查看数据库
 

@@ -5,38 +5,23 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using health_api.Data;
 using health_api.Services;
-using DotNetEnv;
-
-// Load environment variables from .env file
-var envFile = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production" 
-    ? ".env.production" 
-    : ".env.development";
-
-if (File.Exists(envFile))
-{
-    Env.Load(envFile);
-}
-else if (File.Exists(".env"))
-{
-    Env.Load(".env");
-}
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Override configuration with environment variables
-builder.Configuration.AddEnvironmentVariables();
 
 // Configuration
 var config = builder.Configuration;
 
+// Configure Npgsql global type mappings for PostgreSQL enums
+var dataSourceBuilder = new NpgsqlDataSourceBuilder(config.GetConnectionString("DefaultConnection"));
+dataSourceBuilder.MapEnum<health_api.Models.Plan>("health.plan_type");
+dataSourceBuilder.MapEnum<health_api.Models.ModelTier>("health.model_tier");
+var dataSource = dataSourceBuilder.Build();
+
 // DbContext (PostgreSQL only via ConnectionStrings:DefaultConnection)
 builder.Services.AddDbContext<HealthDbContext>(opt =>
 {
-    var cs = config.GetConnectionString("DefaultConnection");
-    if (string.IsNullOrWhiteSpace(cs))
-        throw new Exception("Missing ConnectionStrings:DefaultConnection. Please configure your PostgreSQL connection string.");
-
-    opt.UseNpgsql(cs);
+    opt.UseNpgsql(dataSource);
     opt.EnableDetailedErrors();
 });
 
