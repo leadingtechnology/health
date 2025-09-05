@@ -17,13 +17,13 @@ DO $$
 -- SET app.env = 'dev';
 BEGIN
   IF current_setting('app.env', true) = 'dev' THEN
-    EXECUTE 'DROP SCHEMA IF EXISTS health CASCADE';
-    EXECUTE 'CREATE SCHEMA health';
+    EXECUTE 'DROP SCHEMA IF EXISTS public CASCADE';
+    EXECUTE 'CREATE SCHEMA public';
   ELSE
     RAISE NOTICE 'Production-like env: skip dropping schema (set app.env=dev to allow).';
   END IF;
 END$$;
-SET search_path = health, public;
+SET search_path = public;
 
 -- ============================================================================
 -- Extensions and Basic Setup
@@ -34,8 +34,8 @@ CREATE EXTENSION IF NOT EXISTS citext;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS btree_gin;
 
-CREATE SCHEMA IF NOT EXISTS health;
-SET search_path = health, public;
+--CREATE SCHEMA IF NOT EXISTS health;
+--SET search_path = health, public;
 
 -- Enums
 DO $$ BEGIN
@@ -109,7 +109,7 @@ END $$;
 
 -- Email normalize (basic sanity check; citext handles case-insensitive)
 CREATE OR REPLACE FUNCTION fn_email_normalize(p_email TEXT)
-RETURNS CITEXT LANGUAGE plpgsql STABLE AS $$
+RETURNS citext LANGUAGE plpgsql STABLE AS $$
 DECLARE e TEXT; BEGIN
   IF p_email IS NULL THEN RETURN NULL; END IF;
   e := trim(lower(p_email));

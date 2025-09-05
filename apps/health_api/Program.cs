@@ -14,8 +14,8 @@ var config = builder.Configuration;
 
 // Configure Npgsql global type mappings for PostgreSQL enums
 var dataSourceBuilder = new NpgsqlDataSourceBuilder(config.GetConnectionString("DefaultConnection"));
-dataSourceBuilder.MapEnum<health_api.Models.Plan>("health.plan_type");
-dataSourceBuilder.MapEnum<health_api.Models.ModelTier>("health.model_tier");
+dataSourceBuilder.MapEnum<health_api.Models.Plan>("public.plan_type");
+dataSourceBuilder.MapEnum<health_api.Models.ModelTier>("public.model_tier");
 var dataSource = dataSourceBuilder.Build();
 
 // DbContext (PostgreSQL only via ConnectionStrings:DefaultConnection)

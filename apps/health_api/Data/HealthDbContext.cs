@@ -21,8 +21,8 @@ namespace health_api.Data
 
         protected override void OnModelCreating(ModelBuilder b)
         {
-            // Configure schema
-            b.HasDefaultSchema("health");
+            // Configure schema - using public schema
+            b.HasDefaultSchema("public");
 
             // Configure table names to be lowercase
             b.Entity<User>().ToTable("users");

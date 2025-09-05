@@ -24,12 +24,17 @@ namespace health_api.Services
             var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
                 new Claim("name", user.Name),
                 new Claim("role", user.Role),
                 new Claim("plan", user.Plan.ToString()),
                 new Claim("tier", user.ModelTier.ToString())
             };
+            
+            if (!string.IsNullOrEmpty(user.Email))
+                claims.Add(new Claim(JwtRegisteredClaimNames.Email, user.Email));
+            
+            if (!string.IsNullOrEmpty(user.PhoneE164))
+                claims.Add(new Claim("phone", user.PhoneE164));
 
             var token = new JwtSecurityToken(
                 issuer: issuer,

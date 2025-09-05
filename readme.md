@@ -24,6 +24,7 @@ CREATE DATABASE postgres;
 
 SET app.env = 'dev';
 \i D:/ldtech/health/health/Database/health_postgres.sql
+\i D:/ldtech/health/health/Database/fix_citext_enable.sql
 
 ### 1）查看数据库
 
