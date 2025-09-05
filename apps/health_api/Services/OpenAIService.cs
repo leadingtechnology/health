@@ -21,7 +21,14 @@ namespace health_api.Services
 
         private async Task<string?> GetOpenAIKeyAsync(Guid userId)
         {
-            // For simplicity we use the most recent org-level (Name='default') key. In multi-tenant, scope by org.
+            // First try to get from configuration (simple development setup)
+            var configKey = _cfg["OpenAI:ApiKey"];
+            if (!string.IsNullOrWhiteSpace(configKey) && configKey != "YOUR_OPENAI_API_KEY_HERE")
+            {
+                return configKey;
+            }
+
+            // Otherwise use the encrypted key from database (production setup)
             var ak = await _db.ApiKeys
                 .Where(k => k.Provider == "openai")
                 .OrderByDescending(k => k.CreatedAt)
@@ -36,8 +43,45 @@ namespace health_api.Services
             if (string.IsNullOrWhiteSpace(apiKey))
                 throw new InvalidOperationException("OpenAI API key is not configured.");
 
+            // Get user's plan to determine model selection
+            var user = await _db.Users.FindAsync(userId);
+            if (user == null) throw new InvalidOperationException("User not found.");
+            
             var baseUrl = _cfg["OpenAI:BaseUrl"] ?? "https://api.openai.com/v1";
-            var m = model ?? _cfg["OpenAI:DefaultModel"] ?? "gpt-4o-mini";
+            
+            // Determine model based on plan and override
+            string m;
+            if (!string.IsNullOrEmpty(model))
+            {
+                m = model;
+            }
+            else
+            {
+                // Select model based on plan
+                m = user.Plan switch
+                {
+                    Plan.Platinum => "gpt-4o",      // Best model for Platinum
+                    Plan.Pro => "gpt-4o",           // Advanced model for Pro
+                    Plan.Standard => "gpt-4o-mini", // Standard model 
+                    Plan.Free => "gpt-4o-mini",     // Basic model for Free
+                    _ => "gpt-4o-mini"
+                };
+            }
+            
+            // Check token usage for the month (for Platinum auto-fallback)
+            if (user.Plan == Plan.Platinum)
+            {
+                var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+                var tokenUsage = await _db.QuotaUsages
+                    .Where(q => q.UserId == userId && q.Date >= DateOnly.FromDateTime(monthStart))
+                    .SumAsync(q => q.UsedCount);
+                
+                // If over 12M input tokens equivalent, fallback to mini model
+                if (tokenUsage > 12000000 && m == "gpt-4o")
+                {
+                    m = "gpt-4o-mini"; // Auto-downgrade to mini when quota exceeded
+                }
+            }
 
             var url = $"{baseUrl.TrimEnd('/')}/chat/completions";
             using var req = new HttpRequestMessage(HttpMethod.Post, url);

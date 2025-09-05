@@ -18,12 +18,12 @@ class Environment {
     if (kDebugMode) {
       // .NET dev ports from launchSettings.json: http 61676, https 61675
       // Use HTTP for simplicity to avoid self-signed cert issues.
-      final localBase = _isAndroid ? 'http://10.0.2.2:61676/api' : 'http://localhost:61676/api';
+      final localBase = _isAndroid ? 'http://10.0.2.2:61676' : 'http://localhost:61676';
       return localBase;
     }
 
     // 3) Production default
-    return 'https://api.ldetch.co.jp/api';
+    return 'https://api.ldetch.co.jp';
   }
 
   static bool get isDevelopment => kDebugMode;

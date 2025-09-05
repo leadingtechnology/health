@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-enum Plan { free, standard, pro }
-enum ModelTier { basic, enhanced, realtime }
+enum Plan { free, standard, pro, platinum }
+enum ModelTier { basic, enhanced, advanced, realtime }
 
 class User {
   final String? email;

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../models/models.dart';
+import '../models/plan_config.dart';
 import '../l10n/gen/app_localizations.dart';
+import '../widgets/country_selector.dart'; // Only for LanguageSelector
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -140,7 +142,15 @@ class SettingsPage extends StatelessWidget {
                   title: t.settingsLanguage,
                   icon: Icons.language,
                   children: [
-                    _LanguageSelector(),
+                    LanguageSelector(
+                      value: state.locale?.languageCode,
+                      onChanged: (value) {
+                        if (value != null) {
+                          state.setLocaleCode(value);
+                        }
+                      },
+                      labelText: 'Language',
+                    ),
                   ],
                 ),
                 
@@ -699,37 +709,48 @@ class _PlanSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final t = AppLocalizations.of(context)!;
     final currentPlan = state.plan;
+    
+    // Detect currency based on country code
+    String currencyCode = 'USD';
+    if (state.countryCode == 'JP') currencyCode = 'JPY';
+    else if (state.countryCode == 'KR') currencyCode = 'KRW';
+    else if (state.countryCode == 'TW') currencyCode = 'TWD';
+    else if (state.countryCode == 'CN') currencyCode = 'CNY';
 
     return Column(
       children: [
         _buildPlanOption(
           context,
           plan: Plan.free,
-          title: t.planFreeTitle,
-          subtitle: t.planFreeSubtitle,
-          features: ['3 questions per day', 'Basic AI model'],
+          config: PlanConfigurations.getConfig(Plan.free),
+          currencyCode: currencyCode,
           selected: currentPlan == Plan.free,
         ),
         const SizedBox(height: 8),
         _buildPlanOption(
           context,
           plan: Plan.standard,
-          title: t.planStandardTitle,
-          subtitle: t.planStandardSubtitle,
-          features: ['50 questions per day', 'Enhanced AI model', 'Priority support'],
+          config: PlanConfigurations.getConfig(Plan.standard),
+          currencyCode: currencyCode,
           selected: currentPlan == Plan.standard,
-          recommended: true,
         ),
         const SizedBox(height: 8),
         _buildPlanOption(
           context,
           plan: Plan.pro,
-          title: t.planProTitle,
-          subtitle: t.planProSubtitle,
-          features: ['Unlimited questions', 'All AI models', 'Premium features'],
+          config: PlanConfigurations.getConfig(Plan.pro),
+          currencyCode: currencyCode,
           selected: currentPlan == Plan.pro,
+          recommended: true,
+        ),
+        const SizedBox(height: 8),
+        _buildPlanOption(
+          context,
+          plan: Plan.platinum,
+          config: PlanConfigurations.getConfig(Plan.platinum),
+          currencyCode: currencyCode,
+          selected: currentPlan == Plan.platinum,
         ),
       ],
     );
@@ -738,13 +759,46 @@ class _PlanSelector extends StatelessWidget {
   Widget _buildPlanOption(
     BuildContext context, {
     required Plan plan,
-    required String title,
-    required String subtitle,
-    required List<String> features,
+    required PlanConfig config,
+    required String currencyCode,
     required bool selected,
     bool recommended = false,
   }) {
     final theme = Theme.of(context);
+    final price = config.prices[currencyCode];
+    
+    // Get plan features based on plan
+    List<String> features = [];
+    final quotas = config.quotas;
+    
+    if (plan == Plan.free) {
+      features = [
+        '${quotas.dailyTextQuestions} questions per day',
+        'Basic AI model',
+        'No memory persistence',
+      ];
+    } else if (plan == Plan.standard) {
+      features = [
+        'Unlimited text questions',
+        '${quotas.ttsMinutesPerMonth} min TTS/month',
+        '${quotas.imageGenerationPerMonth} images/month',
+        'Memory persistence',
+      ];
+    } else if (plan == Plan.pro) {
+      features = [
+        '${quotas.offlineSTTMinutesPerMonth} min voice transcription',
+        '${quotas.ttsMinutesPerMonth} min TTS/month',
+        '${quotas.imageGenerationPerMonth} images/month',
+        'Advanced AI model',
+      ];
+    } else if (plan == Plan.platinum) {
+      features = [
+        '${quotas.realtimeVoiceMinutesPerMonth} min realtime voice',
+        '${quotas.offlineSTTMinutesPerMonth} min transcription',
+        '${quotas.imageGenerationPerMonth} images/month',
+        'Realtime translation',
+      ];
+    }
     
     return GestureDetector(
       onTap: () => context.read<AppState>().setPlan(plan),
@@ -775,7 +829,7 @@ class _PlanSelector extends StatelessWidget {
                       Row(
                         children: [
                           Text(
-                            title,
+                            config.name,
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -804,11 +858,41 @@ class _PlanSelector extends StatelessWidget {
                         ],
                       ),
                       Text(
-                        subtitle,
+                        config.description,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
+                      if (price != null && plan != Plan.free) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              '${price.symbol}${price.monthly.toStringAsFixed(price.monthly == price.monthly.roundToDouble() ? 0 : 2)}/mo',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.tertiary.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Save 20% yearly',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: theme.colorScheme.tertiary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -877,7 +961,7 @@ class _ModelTierSelector extends StatelessWidget {
                 child: _buildTierButton(
                   context,
                   tier: ModelTier.basic,
-                  label: t.modelBasic,
+                  label: 'Basic',
                   icon: Icons.speed,
                   selected: currentTier == ModelTier.basic,
                 ),
@@ -886,7 +970,7 @@ class _ModelTierSelector extends StatelessWidget {
                 child: _buildTierButton(
                   context,
                   tier: ModelTier.enhanced,
-                  label: t.modelEnhanced,
+                  label: 'Enhanced',
                   icon: Icons.rocket_launch,
                   selected: currentTier == ModelTier.enhanced,
                 ),
@@ -894,8 +978,17 @@ class _ModelTierSelector extends StatelessWidget {
               Expanded(
                 child: _buildTierButton(
                   context,
+                  tier: ModelTier.advanced,
+                  label: 'Advanced',
+                  icon: Icons.auto_awesome,
+                  selected: currentTier == ModelTier.advanced,
+                ),
+              ),
+              Expanded(
+                child: _buildTierButton(
+                  context,
                   tier: ModelTier.realtime,
-                  label: t.modelRealtime,
+                  label: 'Realtime',
                   icon: Icons.bolt,
                   selected: currentTier == ModelTier.realtime,
                 ),

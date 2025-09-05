@@ -93,7 +93,11 @@
       "Bash(ipconfig)",
       "Read(/D:\\ldtech\\health\\health\\apps\\health_app\\lib\\services/**)",
       "Read(/D:\\ldtech\\health\\health\\apps\\health_app\\lib\\services/**)",
-      "Read(/D:\\ldtech\\health\\health\\apps\\health_app\\lib\\config/**)"
+      "Read(/D:\\ldtech\\health\\health\\apps\\health_app\\lib\\config/**)",
+      "Bash(dir:*)",
+      "Bash(flutter gen-l10n:*)",
+      "Bash(taskkill:*)",
+      "Bash(tasklist)"
     ],
     "deny": [],
     "ask": []

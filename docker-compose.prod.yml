@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  health-api:
+    build:
+      context: ./apps/health_api
+      dockerfile: Dockerfile
+    container_name: health-api-prod
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5000;https://+:5001
+      # Database connection from environment variable
+      - ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING}
+      # JWT settings
+      - Jwt__SigningKey=${JWT_SIGNING_KEY}
+      - Jwt__Issuer=https://api.ldetch.co.jp
+      - Jwt__Audience=https://app.ldetch.co.jp
+      - Jwt__ExpireMinutes=1440
+      # OpenAI settings from environment variables
+      - OpenAI__ApiKey=${OPENAI_API_KEY}
+      - OpenAI__DefaultModel=${OPENAI_MODEL:-gpt-4o-mini}
+      - OpenAI__BaseUrl=https://api.openai.com/v1
+      # Encryption key for API key storage
+      - KEYRING_MASTER_KEY=${KEYRING_MASTER_KEY}
+      # Domain and CORS
+      - Domain=ldetch.co.jp
+      - Cors__AllowedOrigins__0=https://app.ldetch.co.jp
+      - Cors__AllowedOrigins__1=https://ldetch.co.jp
+      # Logging
+      - Logging__LogLevel__Default=Information
+      - Logging__LogLevel__Microsoft.AspNetCore=Warning
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - health-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  health-network:
+    driver: bridge

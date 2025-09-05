@@ -29,6 +29,7 @@ class AppState extends ChangeNotifier {
   int seedColor = Colors.teal.toARGB32();
   ThemeMode themeMode = ThemeMode.system;
   Locale? locale; // null means follow system
+  String? countryCode; // Country/Region code (e.g., 'US', 'JP')
 
   final List<Message> messages = [];
   final List<TaskItem> tasks = [];
@@ -75,6 +76,20 @@ class AppState extends ChangeNotifier {
     if (tm == 'dark') themeMode = ThemeMode.dark;
     if (tm == 'system' || tm == null) themeMode = ThemeMode.system;
 
+    // Always detect country code from system (no manual setting)
+    try {
+      final deviceLocale = WidgetsBinding.instance.platformDispatcher.locale;
+      final country = deviceLocale.countryCode;
+      if (country != null && country.isNotEmpty) {
+        countryCode = country;
+      } else {
+        countryCode = 'US'; // Default to US if system doesn't provide
+      }
+    } catch (_) {
+      countryCode = 'US'; // Default to US on error
+    }
+
+    // Load language/locale
     final locCode = prefs.getString('localeCode');
     if (locCode != null && locCode.isNotEmpty && locCode != 'system') {
       locale = Locale(locCode);
@@ -82,13 +97,20 @@ class AppState extends ChangeNotifier {
       try {
         final deviceLocale = WidgetsBinding.instance.platformDispatcher.locale;
         final code = deviceLocale.languageCode;
-        const supported = ['en', 'zh', 'ja'];
-        final chosen = supported.contains(code) ? code : 'ja';
-        locale = Locale(chosen);
-        await prefs.setString('localeCode', chosen);
+        const supported = ['en', 'zh', 'ja', 'fr', 'de', 'ko', 'pt', 'ru', 'es', 'vi'];
+        final chosen = supported.contains(code) ? code : 'en'; // Default to English
+        
+        // Handle Traditional Chinese
+        if (code == 'zh' && deviceLocale.countryCode == 'TW') {
+          locale = const Locale.fromSubtags(languageCode: 'zh', countryCode: 'TW');
+          await prefs.setString('localeCode', 'zh_TW');
+        } else {
+          locale = Locale(chosen);
+          await prefs.setString('localeCode', chosen);
+        }
       } catch (_) {
-        locale = const Locale('ja');
-        await prefs.setString('localeCode', 'ja');
+        locale = const Locale('en'); // Default to English
+        await prefs.setString('localeCode', 'en');
       }
     }
 
@@ -109,7 +131,9 @@ class AppState extends ChangeNotifier {
   bool get isFreePlan => plan == Plan.free;
   bool get canAskNow {
     resetIfNewDay();
+    // Only Free plan has daily question limits
     if (plan == Plan.free) return usedToday < dailyLimitFree;
+    // All paid plans (Standard, Pro, Platinum) have unlimited text questions
     return true;
   }
 
@@ -176,6 +200,8 @@ class AppState extends ChangeNotifier {
   Future<void> setLocaleCode(String code) async {
     if (code == 'system') {
       locale = null;
+    } else if (code == 'zh_TW') {
+      locale = const Locale.fromSubtags(languageCode: 'zh', countryCode: 'TW');
     } else {
       locale = Locale(code);
     }
@@ -183,6 +209,9 @@ class AppState extends ChangeNotifier {
     await prefs.setString('localeCode', code);
     notifyListeners();
   }
+  
+  // Country code is now automatically detected from system only
+  // No manual setting allowed
 
   Future<void> _persist() async {
     final prefs = await SharedPreferences.getInstance();
@@ -223,32 +252,88 @@ class AppState extends ChangeNotifier {
   
   Future<AskResult> ask(String text) async {
     resetIfNewDay();
+    
+    // Check quota for free plan
     if (plan == Plan.free && usedToday >= dailyLimitFree) {
+      messages.add(Message(
+        id: UniqueKey().toString(),
+        fromUser: false,
+        time: DateTime.now(),
+        text: 'You\'ve reached your daily limit of 3 questions. Upgrade to continue!',
+        actions: const [],
+      ));
+      notifyListeners();
       return AskResult.limited;
     }
+    
+    // Add user message
     messages.add(Message(
       id: UniqueKey().toString(),
       fromUser: true,
       text: text.trim(),
       time: DateTime.now(),
     ));
-    if (plan == Plan.free) {
-      usedToday++;
-      await _persist();
-    }
     notifyListeners();
 
-    await Future.delayed(const Duration(milliseconds: 600));
-    final loc = await AppLocalizations.delegate.load(locale ?? const Locale('en'));
-    messages.add(Message(
-      id: UniqueKey().toString(),
-      fromUser: false,
-      time: DateTime.now(),
-      text: loc.sampleAdvice,
-      actions: const ['set_task', 'export_pdf', 'share'],
-    ));
-    notifyListeners();
-    return AskResult.ok;
+    // Call OpenAI API through backend
+    final result = await _api.askOpenAI(text.trim());
+    
+    if (result.success && result.data != null) {
+      // Success - add AI response with plan-specific actions
+      List<String> actions = ['set_task'];
+      
+      // Add actions based on plan
+      if (plan != Plan.free) {
+        actions.add('export_pdf');
+        actions.add('share');
+      }
+      if (plan == Plan.standard || plan == Plan.pro || plan == Plan.platinum) {
+        actions.add('tts_play'); // TTS playback available
+      }
+      if (plan == Plan.platinum) {
+        actions.add('translate'); // Real-time translation
+      }
+      
+      messages.add(Message(
+        id: UniqueKey().toString(),
+        fromUser: false,
+        time: DateTime.now(),
+        text: result.data!,
+        actions: actions,
+      ));
+      
+      // Update usage for free plan
+      if (plan == Plan.free) {
+        usedToday++;
+        await _persist();
+      }
+      
+      notifyListeners();
+      return AskResult.ok;
+    } else {
+      // Error handling
+      String errorMessage;
+      if (result.error?.contains('quota') ?? false) {
+        errorMessage = plan == Plan.free 
+          ? 'Daily free quota reached. Upgrade to Standard, Pro, or Platinum for unlimited access!'
+          : 'Monthly quota reached. Consider upgrading your plan.';
+      } else if (result.error?.contains('429') ?? false) {
+        errorMessage = 'Service is busy. Please try again in a moment.';
+      } else {
+        errorMessage = 'Sorry, I encountered an error. Please try again.';
+      }
+      
+      messages.add(Message(
+        id: UniqueKey().toString(),
+        fromUser: false,
+        time: DateTime.now(),
+        text: errorMessage,
+        actions: const [],
+      ));
+      
+      notifyListeners();
+      return result.error?.contains('quota') ?? false ? AskResult.limited : AskResult.ok;
+    }
   }
 }
 

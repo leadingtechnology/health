@@ -11,7 +11,7 @@ namespace health_api.Services
 
         public (int dailyLimit, DateTime resetAt) GetPolicy(Plan plan)
         {
-            // Free: 3/day, Standard/Pro: unlimited*
+            // Free: 3/day, others: unlimited text questions (but have other quotas)
             return plan == Plan.Free ? (3, GetResetAtLocalMidnight()) : (int.MaxValue, GetResetAtLocalMidnight());
         }
 

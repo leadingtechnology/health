@@ -40,10 +40,10 @@ CREATE EXTENSION IF NOT EXISTS btree_gin;
 -- Enums
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname='plan_type') THEN
-    CREATE TYPE plan_type AS ENUM ('free','standard','pro');
+    CREATE TYPE plan_type AS ENUM ('free','standard','pro','platinum');
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname='model_tier') THEN
-    CREATE TYPE model_tier AS ENUM ('basic','enhanced','realtime');
+    CREATE TYPE model_tier AS ENUM ('basic','enhanced','advanced','realtime');
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname='care_role_type') THEN
     CREATE TYPE care_role_type AS ENUM ('member','caregiver','doctor','admin');

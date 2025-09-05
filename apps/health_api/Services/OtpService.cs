@@ -58,11 +58,16 @@ namespace health_api.Services
 
         public string GenerateOtpCode(int digits = 6)
         {
+            // Generate a numeric OTP with cryptographically secure randomness
             if (digits < 4 || digits > 10) digits = 6;
-            var random = new Random();
-            var max = (int)Math.Pow(10, digits);
-            var code = random.Next(0, max);
-            return code.ToString().PadLeft(digits, '0');
+            var sb = new StringBuilder(digits);
+            for (int i = 0; i < digits; i++)
+            {
+                // Uniform digit 0-9 without modulo bias
+                var d = RandomNumberGenerator.GetInt32(0, 10);
+                sb.Append((char)('0' + d));
+            }
+            return sb.ToString();
         }
 
         public async Task<(Guid otpId, string identifier, string code, DateTime expiresAt)> CreatePhoneOtp(

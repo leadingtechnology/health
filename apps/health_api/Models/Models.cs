@@ -4,8 +4,8 @@ using System.Text.Json.Serialization;
 
 namespace health_api.Models
 {
-    public enum Plan { Free, Standard, Pro }
-    public enum ModelTier { Basic, Enhanced, Realtime }
+    public enum Plan { Free, Standard, Pro, Platinum }
+    public enum ModelTier { Basic, Enhanced, Advanced, Realtime }
 
     public class User
     {

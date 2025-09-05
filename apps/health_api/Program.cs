@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Reflection;
 using health_api.Data;
 using health_api.Services;
 using Npgsql;
@@ -92,6 +93,18 @@ builder.Services.AddSwaggerGen(c =>
     {
         { securityScheme, new List<string>() }
     });
+
+    // Include XML comments for Swagger (controller + action summaries)
+    try
+    {
+        var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+        var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+        if (File.Exists(xmlPath))
+        {
+            c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+        }
+    }
+    catch { /* best-effort */ }
 });
 
 var app = builder.Build();
@@ -203,4 +216,3 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
-

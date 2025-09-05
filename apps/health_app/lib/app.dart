@@ -35,7 +35,19 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       themeMode: state.themeMode,
       locale: state.locale,
-      supportedLocales: const [Locale('en'), Locale('zh'), Locale('ja')],
+      supportedLocales: const [
+        Locale('en'),        // English
+        Locale('zh'),        // Chinese (Simplified)
+        Locale.fromSubtags(languageCode: 'zh', countryCode: 'TW'), // Chinese (Traditional)
+        Locale('fr'),        // French
+        Locale('de'),        // German
+        Locale('ja'),        // Japanese
+        Locale('ko'),        // Korean
+        Locale('pt'),        // Portuguese
+        Locale('ru'),        // Russian
+        Locale('es'),        // Spanish
+        Locale('vi'),        // Vietnamese
+      ],
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -94,7 +106,9 @@ class _AppShellState extends State<AppShell> {
     final showFab = _index == 1;
     
     return Scaffold(
-      body: IndexedStack(index: _index, children: _pages),
+      body: SafeArea(
+        child: IndexedStack(index: _index, children: _pages),
+      ),
       floatingActionButton: showFab
           ? FloatingActionButton.extended(
               onPressed: () => Navigator.of(context).pushNamed('/tasks/edit'),

@@ -9,7 +9,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Load environment variables
-  final envFile = kReleaseMode ? '.env.production' : '.env.development';
+  const envFile = kReleaseMode ? '.env.production' : '.env.development';
   await dotenv.load(fileName: envFile);
   
   runApp(
