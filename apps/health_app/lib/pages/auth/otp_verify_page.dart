@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
+import '../../services/consent_service.dart';
 import '../../state/app_state.dart';
-import '../../models/models.dart';
+// import '../../models/models.dart';
+import '../../widgets/consent_dialog.dart';
 
 class OtpVerifyPage extends StatefulWidget {
   final String identifier;
@@ -109,6 +111,26 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
       );
       
       if (result.success) {
+        // Token is already saved by AuthService.verifyOtp
+      // Check if user has agreed to terms from database
+      final consentRes = await ConsentService().getConsentStatus();
+      final hasAgreedToTerms = consentRes.success && (consentRes.data?.hasAgreedToTerms ?? false);
+      final hasAgreedToPrivacy = consentRes.success && (consentRes.data?.hasAgreedToPrivacyPolicy ?? false);
+      final hasAgreedToDataProcessing = consentRes.success && (consentRes.data?.hasAgreedToDataProcessing ?? false);
+        
+        // If any consent is missing, show consent dialog
+        if ((!hasAgreedToTerms || !hasAgreedToPrivacy || !hasAgreedToDataProcessing) && mounted) {
+          // Show consent dialog for users who haven't consented
+          final agreed = await showConsentDialog(context);
+          if (!agreed) {
+            // User did not agree to terms, don't proceed
+            setState(() {
+              _errorMessage = 'You must agree to the terms to continue';
+            });
+            return;
+          }
+        }
+        
         // Update app state with user info and token
         if (!mounted) return;
         final appState = Provider.of<AppState>(context, listen: false);

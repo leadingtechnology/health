@@ -100,7 +100,8 @@
       "Bash(tasklist)",
       "Bash(flutter build:*)",
       "Bash(flutter:*)",
-      "Bash(dart analyze:*)"
+      "Bash(dart analyze:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

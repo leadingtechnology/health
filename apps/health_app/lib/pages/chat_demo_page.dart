@@ -4,7 +4,6 @@ import '../widgets/simple_chat_input.dart';
 import '../widgets/simple_message_bubble.dart';
 import '../models/message_model.dart';
 import '../services/api_service.dart';
-import 'package:http/http.dart' as http;
 
 class ChatDemoPage extends StatefulWidget {
   const ChatDemoPage({super.key});

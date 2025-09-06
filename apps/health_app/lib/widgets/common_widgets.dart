@@ -19,7 +19,6 @@ class AppCard extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final cardContent = Card(
       elevation: elevation,
       color: color,

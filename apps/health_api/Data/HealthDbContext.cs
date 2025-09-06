@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using health_api.Models;
+using HealthApi.Models;
 
 namespace health_api.Data
 {
@@ -20,6 +21,8 @@ namespace health_api.Data
         public DbSet<Models.Task> Tasks => Set<Models.Task>();
         public DbSet<PhoneOtp> PhoneOtps => Set<PhoneOtp>();
         public DbSet<EmailOtp> EmailOtps => Set<EmailOtp>();
+        public DbSet<UserConsent> UserConsents => Set<UserConsent>();
+        public DbSet<ThirdPartyProvisionLog> ThirdPartyProvisionLogs => Set<ThirdPartyProvisionLog>();
 
         protected override void OnModelCreating(ModelBuilder b)
         {
@@ -209,6 +212,44 @@ namespace health_api.Data
             b.Entity<MessageAttachment>().Property(a => a.CreatedAt).HasColumnName("created_at");
             b.Entity<MessageAttachment>()
                 .HasOne(a => a.Message).WithMany(m => m.Attachments).HasForeignKey(a => a.MessageId).OnDelete(DeleteBehavior.Cascade);
+
+            // UserConsent configuration
+            b.Entity<UserConsent>().ToTable("user_consents");
+            b.Entity<UserConsent>().Property(c => c.Id).HasColumnName("id");
+            b.Entity<UserConsent>().Property(c => c.UserId).HasColumnName("user_id");
+            b.Entity<UserConsent>().Property(c => c.Type).HasColumnName("type");
+            b.Entity<UserConsent>().Property(c => c.DocKey).HasColumnName("doc_key");
+            b.Entity<UserConsent>().Property(c => c.DocVersion).HasColumnName("doc_version");
+            b.Entity<UserConsent>().Property(c => c.ContentSha256).HasColumnName("content_sha256");
+            b.Entity<UserConsent>().Property(c => c.Accepted).HasColumnName("accepted");
+            b.Entity<UserConsent>().Property(c => c.LegalBasis).HasColumnName("legal_basis");
+            b.Entity<UserConsent>().Property(c => c.Recipient).HasColumnName("recipient");
+            b.Entity<UserConsent>().Property(c => c.RecipientCountry).HasColumnName("recipient_country");
+            b.Entity<UserConsent>().Property(c => c.Method).HasColumnName("method");
+            b.Entity<UserConsent>().Property(c => c.IpAddress).HasColumnName("ip");
+            b.Entity<UserConsent>().Property(c => c.UserAgent).HasColumnName("user_agent");
+            b.Entity<UserConsent>().Property(c => c.Locale).HasColumnName("locale");
+            b.Entity<UserConsent>().Property(c => c.CreatedAt).HasColumnName("created_at");
+            b.Entity<UserConsent>().Property(c => c.RevokedAt).HasColumnName("revoked_at");
+            b.Entity<UserConsent>()
+                .HasOne(c => c.User).WithMany().HasForeignKey(c => c.UserId).OnDelete(DeleteBehavior.Cascade);
+            b.Entity<UserConsent>()
+                .HasIndex(c => new { c.UserId, c.Type })
+                .HasFilter("revoked_at IS NULL AND accepted = true")
+                .HasDatabaseName("ux_user_consents_active");
+
+            // ThirdPartyProvisionLog configuration
+            b.Entity<ThirdPartyProvisionLog>().ToTable("third_party_provision_log");
+            b.Entity<ThirdPartyProvisionLog>().Property(l => l.Id).HasColumnName("id");
+            b.Entity<ThirdPartyProvisionLog>().Property(l => l.UserId).HasColumnName("user_id");
+            b.Entity<ThirdPartyProvisionLog>().Property(l => l.RecipientName).HasColumnName("recipient_name");
+            b.Entity<ThirdPartyProvisionLog>().Property(l => l.RecipientAddress).HasColumnName("recipient_address");
+            b.Entity<ThirdPartyProvisionLog>().Property(l => l.RecipientCountry).HasColumnName("recipient_country");
+            b.Entity<ThirdPartyProvisionLog>().Property(l => l.Categories).HasColumnName("categories");
+            b.Entity<ThirdPartyProvisionLog>().Property(l => l.Method).HasColumnName("method");
+            b.Entity<ThirdPartyProvisionLog>().Property(l => l.ProvidedAt).HasColumnName("provided_at");
+            b.Entity<ThirdPartyProvisionLog>()
+                .HasOne(l => l.User).WithMany().HasForeignKey(l => l.UserId).OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

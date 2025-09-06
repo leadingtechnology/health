@@ -21,17 +21,13 @@ class _AssistantPageState extends State<AssistantPage> {
   final TextEditingController _ctrl = TextEditingController();
   final ScrollController _scroll = ScrollController();
   final FocusNode _focusNode = FocusNode();
-  bool _isTyping = false;
   bool loading = false;
 
   @override
   void initState() {
     super.initState();
-    _ctrl.addListener(() {
-      setState(() {
-        _isTyping = _ctrl.text.isNotEmpty;
-      });
-    });
+    // No-op listener retained for potential future use
+    _ctrl.addListener(() {});
   }
 
   @override
@@ -243,10 +239,5 @@ class _AssistantPageState extends State<AssistantPage> {
     }
   }
   
-  // Keep the old method for backward compatibility
-  Future<void> _sendMessage() async {
-    final text = _ctrl.text.trim();
-    if (text.isEmpty) return;
-    await _sendMessageWithAttachments(text, []);
-  }
+  // _sendMessage was unused; removed to clean warnings
 }

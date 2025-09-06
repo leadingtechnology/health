@@ -27,7 +27,7 @@ SET app.env = 'dev';
 \i D:/ldtech/health/health/Database/fix_citext_enable.sql
 \i D:/ldtech/health/health/Database/migration_add_platinum_plan.sql
 \i D:/ldtech/health/health/Database/add_multimedia_support.sql
-
+\i D:/ldtech/health/health/Database/sql_user_consents.sql
 
 ### 1）查看数据库
 
@@ -43,6 +43,7 @@ SELECT datname FROM pg_database WHERE datistemplate = false;
 - Description: Returns all subscription plans (Free, Standard, Pro, Platinum) with monthly/yearly pricing and feature quotas.
 
 Response (200): Array of PlanConfiguration
+
 - plan: `free|standard|pro|platinum`
 - name: Display name
 - description: Short description

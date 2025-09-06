@@ -6,7 +6,9 @@ using Microsoft.OpenApi.Models;
 using System.Reflection;
 using health_api.Data;
 using health_api.Services;
+using HealthApi.Services;
 using Npgsql;
+using Npgsql.NameTranslation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +19,10 @@ var config = builder.Configuration;
 var dataSourceBuilder = new NpgsqlDataSourceBuilder(config.GetConnectionString("DefaultConnection"));
 dataSourceBuilder.MapEnum<health_api.Models.Plan>("public.plan_type");
 dataSourceBuilder.MapEnum<health_api.Models.ModelTier>("public.model_tier");
+
+// Map ConsentType enum with name translator for snake_case
+dataSourceBuilder.MapEnum<HealthApi.Models.ConsentType>("public.consent_type", new NpgsqlSnakeCaseNameTranslator());
+
 var dataSource = dataSourceBuilder.Build();
 
 // DbContext (PostgreSQL only via ConnectionStrings:DefaultConnection)
@@ -68,6 +74,7 @@ builder.Services.AddSingleton<EncryptionService>();
 builder.Services.AddScoped<OpenAIService>();
 builder.Services.AddScoped<QuotaService>();
 builder.Services.AddScoped<OtpService>();
+builder.Services.AddScoped<ILegalDocumentService, LegalDocumentService>();
 
 builder.Services.AddControllers().AddJsonOptions(o =>
 {

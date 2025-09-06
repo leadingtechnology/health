@@ -5,7 +5,6 @@ import '../models/models.dart';
 import '../models/plan_config.dart';
 import '../l10n/gen/app_localizations.dart';
 import '../widgets/country_selector.dart'; // Only for LanguageSelector
-import '../services/api_service.dart'; // For ApiResult
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -987,7 +986,6 @@ class _ModelTierSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final t = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final currentTier = state.modelTier;
 

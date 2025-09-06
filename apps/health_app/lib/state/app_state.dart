@@ -7,7 +7,6 @@ import '../models/models.dart';
 import '../l10n/gen/app_localizations.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
-import 'package:http/http.dart' as http;
 
 class AppState extends ChangeNotifier {
   final ApiService _api = ApiService();

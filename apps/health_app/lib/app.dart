@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'state/app_state.dart';
 import 'theme/app_theme.dart';
@@ -9,6 +8,10 @@ import 'pages/task_edit_page.dart';
 import 'pages/circle_page.dart';
 import 'pages/settings_page.dart';
 import 'pages/auth/login_page.dart';
+import 'pages/legal/privacy_policy_page.dart';
+import 'pages/legal/terms_of_service_page.dart';
+import 'services/consent_service.dart';
+import 'widgets/consent_dialog.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/gen/app_localizations.dart';
 
@@ -74,6 +77,8 @@ class MyApp extends StatelessWidget {
       routes: {
         '/tasks/edit': (_) => const TaskEditPage(),
         '/login': (_) => const LoginPage(),
+        '/legal/privacy': (_) => const PrivacyPolicyPage(),
+        '/legal/terms': (_) => const TermsOfServicePage(),
       },
     );
   }
@@ -94,6 +99,48 @@ class _AppShellState extends State<AppShell> {
     CirclePage(),
     SettingsPage(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Check consent status after the first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkConsentStatus();
+    });
+  }
+
+  Future<void> _checkConsentStatus() async {
+    try {
+      // Check if user has agreed to terms from database
+      final consentRes = await ConsentService().getConsentStatus();
+      if (consentRes.success && consentRes.data != null) {
+        final hasAgreedToTerms = consentRes.data!.hasAgreedToTerms;
+        final hasAgreedToPrivacy = consentRes.data!.hasAgreedToPrivacyPolicy;
+        final hasAgreedToDataProcessing = consentRes.data!.hasAgreedToDataProcessing;
+        
+        // If any consent is missing, show consent dialog
+        if (!hasAgreedToTerms || !hasAgreedToPrivacy || !hasAgreedToDataProcessing) {
+          if (mounted) {
+            final agreed = await showConsentDialog(context);
+            if (!agreed) {
+              // If user doesn't agree, log them out
+              if (mounted) {
+                final appState = Provider.of<AppState>(context, listen: false);
+                await appState.logout();
+                Navigator.of(context).pushReplacementNamed('/login');
+              }
+            }
+          }
+        }
+      } else {
+        debugPrint('Failed to get consent status: ${consentRes.error ?? 'unknown error'}');
+      }
+    } catch (e) {
+      // If we can't check consent status, it might be a network issue
+      // We'll let the user continue but check again next time
+      debugPrint('Failed to check consent status: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

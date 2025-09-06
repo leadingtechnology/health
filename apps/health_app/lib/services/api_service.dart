@@ -5,7 +5,11 @@ import '../config/environment.dart';
 import '../models/plan_config.dart';
 
 class ApiService {
-  static String get _baseUrl => Environment.apiUrl;
+  static String get _baseUrl {
+    final url = Environment.apiUrl;
+    print('[ApiService] Base URL: $url');
+    return url;
+  }
   static const String _tokenKey = 'auth_token';
   static const String _tokenExpiryKey = 'token_expiry';
   
@@ -62,6 +66,8 @@ class ApiService {
   
   Future<http.Response> post(String endpoint, Map<String, dynamic> body) async {
     final url = Uri.parse('$_baseUrl$endpoint');
+    print('[ApiService] POST to: $url');
+    print('[ApiService] Headers: $_headers');
     return await http.post(
       url,
       headers: _headers,

@@ -4,10 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a health assistant application with:
+Health assistant application with multi-language support, subscription tiers, and legal consent management:
 - **Backend API**: .NET 8 RESTful API (`apps/health_api/`) with JWT authentication, quota management, care circles, and OpenAI integration
-- **Mobile App**: Flutter Material 3 application (`apps/health_app/`)
-- **Database**: PostgreSQL schema (`Database/health_postgres.sql`) with health schema including users, care circles, patients, conversations
+- **Mobile App**: Flutter Material 3 application (`apps/health_app/`) with internationalization (11 languages)
+- **Database**: PostgreSQL with `health` schema including users, care circles, patients, conversations, and consent tracking
+- **Testing**: Unit tests in `apps/health_api.Tests/`
 
 ## Development Commands
 
@@ -20,19 +21,22 @@ cd apps/health_api
 dotnet restore
 
 # Set encryption key (required for API key encryption)
-# Linux/Mac:
-export KEYRING_MASTER_KEY=$(openssl rand -base64 32)
 # Windows PowerShell:
 setx KEYRING_MASTER_KEY ([Convert]::ToBase64String((New-Object byte[] 32 | % {[void](New-Object System.Security.Cryptography.RNGCryptoServiceProvider).GetBytes($_)})))
+# Linux/Mac:
+export KEYRING_MASTER_KEY=$(openssl rand -base64 32)
 
-# Run in development (uses SQLite by default)
+# Run in development (uses PostgreSQL via ConnectionStrings:DefaultConnection)
 dotnet run
 
 # Build
 dotnet build
 
-# Run tests (if available)
+# Run tests
+cd ../health_api.Tests
 dotnet test
+
+# Generate Swagger docs (available at /swagger when running)
 ```
 
 ### Flutter App
@@ -43,17 +47,23 @@ cd apps/health_app
 # Install dependencies
 flutter pub get
 
+# Generate localization files
+flutter gen-l10n
+
 # Run on connected device/emulator
 flutter run
+
+# Analyze code for issues
+flutter analyze
+
+# Run Dart analyzer
+dart analyze
 
 # Build APK
 flutter build apk
 
 # Build iOS (Mac only)
 flutter build ios
-
-# Analyze code
-flutter analyze
 ```
 
 ### Database Setup
@@ -61,11 +71,16 @@ flutter analyze
 # Connect to Google Cloud SQL
 gcloud sql connect racketrallydb --user=postgres --database=postgres --project=ldtech
 
-# Initialize database
+# Initialize database with all migrations
 \encoding UTF8
+\set ON_ERROR_STOP on
 \i D:/ldtech/health/health/Database/health_postgres.sql
+\i D:/ldtech/health/health/Database/fix_citext_enable.sql
+\i D:/ldtech/health/health/Database/migration_add_platinum_plan.sql
+\i D:/ldtech/health/health/Database/add_multimedia_support.sql
+\i D:/ldtech/health/health/Database/sql_user_consents.sql
 
-# Switch to health database
+# Switch to health database and set schema
 \c racketrally
 SET search_path TO health, public;
 ```
@@ -73,43 +88,58 @@ SET search_path TO health, public;
 ## Architecture
 
 ### Backend API Structure
-- **Authentication**: JWT-based with Bearer tokens (`/api/auth/`)
-- **User Management**: Quota system (3 free questions/day), user plans (free/standard/pro)
-- **Care Circles**: Family/care group management with owner/admin/member roles
-- **OpenAI Integration**: Secure API key storage (AES-GCM encryption), proxy endpoint at `/api/openai/ask`
-- **Database**: Entity Framework Core with support for both SQLite (dev) and PostgreSQL (prod)
-- **CORS**: Configured for `https://app.ldetch.co.jp` and localhost ports
+- **Authentication**: JWT-based with Bearer tokens, OTP verification for registration
+- **User Management**: Quota system (3 free questions/day), subscription plans (free/standard/pro/platinum)
+- **Care Circles**: Family/care group management with role-based access (owner/admin/member)
+- **OpenAI Integration**: Secure API key storage (AES-GCM encryption), quota-gated proxy endpoint
+- **Legal Compliance**: Consent management system with versioned legal documents in multiple languages
+- **Database**: Entity Framework Core with PostgreSQL, Npgsql with enum mappings for plan_type and model_tier
+- **CORS**: Configured for production domain and localhost development
 
 ### Key API Endpoints
-- Auth: `POST /api/auth/register`, `POST /api/auth/login`
-- User: `GET /api/users/me`, `GET /api/users/me/quota`
-- Circles: `GET/POST /api/circles`, `POST /api/circles/{id}/members`
-- Patients: `GET/POST /api/patients`
-- Conversations: `GET/POST /api/conversations`
-- OpenAI: `POST /api/openai/ask` (quota-gated proxy)
-- Settings: `GET/POST /api/orgsettings/openai` (admin only)
+- **Auth**: `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/verify-otp`
+- **User**: `GET /api/users/me`, `GET /api/users/me/quota`, `PUT /api/users/me`
+- **Plans**: `GET /api/plans` (public endpoint for subscription tiers with pricing)
+- **Circles**: `GET/POST /api/circles`, `POST /api/circles/{id}/members`
+- **Patients**: `GET/POST /api/patients`, `PUT /api/patients/{id}`
+- **Conversations**: `GET/POST /api/conversations`, `GET /api/conversations/{id}/messages`
+- **OpenAI**: `POST /api/openai/ask` (quota-gated proxy)
+- **Legal**: `GET /api/legal/documents/{locale}`, `POST /api/consents/record`
+- **Settings**: `GET/POST /api/orgsettings/openai` (admin only)
 
 ### Database Schema
-- Uses PostgreSQL with `health` schema
-- Key tables: `users`, `care_circles`, `care_circle_members`, `patients`, `conversations`, `share_grants`, `quota_usages`, `api_key_secrets`
-- Built-in functions for quota management: `fn_quota_try_consume()`, `fn_quota_get()`
-- Audit logging with triggers
-- Support for timezone-aware quota resets
+- PostgreSQL with `health` schema namespace
+- Core tables: `users`, `care_circles`, `care_circle_members`, `patients`, `conversations`, `user_consents`
+- Quota management: `quota_usages` table with built-in functions `fn_quota_try_consume()`, `fn_quota_get()`
+- Security: `api_key_secrets` for encrypted storage, `share_grants` for access control
+- Audit: Triggers for automatic timestamp updates and audit logging
+- Timezone-aware quota resets with daily/monthly tracking
 
-### Flutter App
-- Material 3 design system
-- Provider for state management
-- SharedPreferences for local storage
-- Internationalization support (l10n)
+### Flutter App Architecture
+- **State Management**: Provider pattern with `AppState` for global state
+- **Services**: Dedicated service classes for API communication (`AuthService`, `ConsentService`)
+- **Routing**: Named routes with authentication guards
+- **UI Components**: Material 3 design system with custom widgets
+- **Localization**: 11 languages (en, zh, ja, ko, es, fr, de, pt, ru, vi) via flutter_localizations
+- **Storage**: SharedPreferences for JWT tokens and user preferences
+- **Image Handling**: Image picker with permission handling, cached network images
 
 ## Important Configurations
 
 ### Required Environment Variables
-- `KEYRING_MASTER_KEY`: Base64-encoded 32-byte key for AES-GCM encryption (required)
-- `Jwt__SigningKey`: JWT signing key (≥32 characters recommended)
-- `ConnectionStrings__Default`: Database connection (defaults to SQLite)
+- `KEYRING_MASTER_KEY`: Base64-encoded 32-byte key for AES-GCM encryption (REQUIRED)
+- `Jwt__SigningKey`: JWT signing key (minimum 32 characters)
+- `Jwt__Issuer`: JWT issuer (defaults to https://app.ldetch.co.jp)
+- `Jwt__Audience`: JWT audience (defaults to https://app.ldetch.co.jp)
+- `ConnectionStrings__DefaultConnection`: PostgreSQL connection string
+- `Cors__AllowedOrigins`: Array of allowed CORS origins
 
 ### Domain Configuration
 - Primary domain: `ldetch.co.jp`
 - App subdomain: `app.ldetch.co.jp`
-- CORS and JWT issuer/audience configured for these domains
+- API endpoints configured for both production and localhost:5173 (dev)
+
+### Legal Documents Structure
+- Documents stored in `wwwroot/legal/{locale}/` directories
+- Supported types: privacy_policy, terms_of_service, data_processing_consent, cross_border_transfer
+- SHA256 hashing for version tracking and consent validation
