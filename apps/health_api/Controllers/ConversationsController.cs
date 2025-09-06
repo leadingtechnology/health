@@ -60,5 +60,54 @@ namespace health_api.Controllers
             await _db.SaveChangesAsync();
             return Ok(new { s.Id });
         }
+        
+        [HttpGet("{conversationId}/messages")]
+        public async Task<IActionResult> GetMessages(Guid conversationId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            // Check if user has access to this conversation
+            var conv = await _db.Conversations
+                .Where(c => c.Id == conversationId && c.OwnerUserId == UserId)
+                .FirstOrDefaultAsync();
+                
+            if (conv == null) return NotFound();
+            
+            // Get messages with attachments
+            var messages = await _db.Messages
+                .Include(m => m.Attachments)
+                .Where(m => m.ConversationId == conversationId)
+                .OrderByDescending(m => m.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(m => new
+                {
+                    m.Id,
+                    m.Content,
+                    m.Role,
+                    m.CreatedAt,
+                    Attachments = m.Attachments.Select(a => new
+                    {
+                        a.Id,
+                        a.FileName,
+                        a.ContentType,
+                        a.FileType,
+                        a.FileSize,
+                        a.ThumbnailPath,
+                        a.DurationSeconds,
+                        a.TranscriptionText
+                    })
+                })
+                .ToListAsync();
+                
+            var totalMessages = await _db.Messages.CountAsync(m => m.ConversationId == conversationId);
+            
+            return Ok(new
+            {
+                conversationId,
+                messages = messages.AsEnumerable().Reverse(), // Return in chronological order
+                totalMessages,
+                currentPage = page,
+                totalPages = (int)Math.Ceiling(totalMessages / (double)pageSize)
+            });
+        }
     }
 }

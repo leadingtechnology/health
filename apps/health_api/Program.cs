@@ -110,6 +110,10 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 app.UseCors("AppCors");
+
+// Serve static files for uploads
+app.UseStaticFiles();
+
 app.UseAuthentication();
 app.UseAuthorization();
 

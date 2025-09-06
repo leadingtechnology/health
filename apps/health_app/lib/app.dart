@@ -6,7 +6,6 @@ import 'theme/app_theme.dart';
 import 'pages/assistant_page.dart';
 import 'pages/tasks_page.dart';
 import 'pages/task_edit_page.dart';
-import 'pages/logs_page.dart';
 import 'pages/circle_page.dart';
 import 'pages/settings_page.dart';
 import 'pages/auth/login_page.dart';
@@ -92,7 +91,6 @@ class _AppShellState extends State<AppShell> {
   final _pages = const [
     AssistantPage(),
     TasksPage(),
-    LogsPage(),
     CirclePage(),
     SettingsPage(),
   ];
@@ -142,11 +140,6 @@ class _AppShellState extends State<AppShell> {
               icon: const Icon(Icons.task_outlined),
               selectedIcon: const Icon(Icons.task),
               label: t.navTasks,
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.insights_outlined),
-              selectedIcon: const Icon(Icons.insights),
-              label: t.navLogs,
             ),
             NavigationDestination(
               icon: const Icon(Icons.group_outlined),

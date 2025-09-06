@@ -103,5 +103,65 @@ namespace health_api.Services
             int outTok = root.TryGetProperty("usage", out usage) ? usage.GetProperty("completion_tokens").GetInt32() : 0;
             return (text, m, inTok, outTok);
         }
+
+        // Support for Vision API with images
+        public async Task<(string reply, string model, int inTok, int outTok)> AskWithImagesAsync(Guid userId, string prompt, List<string> base64Images)
+        {
+            var apiKey = await GetOpenAIKeyAsync(userId);
+            if (string.IsNullOrWhiteSpace(apiKey))
+                throw new InvalidOperationException("OpenAI API key is not configured.");
+
+            var user = await _db.Users.FindAsync(userId);
+            if (user == null) throw new InvalidOperationException("User not found.");
+            
+            var baseUrl = _cfg["OpenAI:BaseUrl"] ?? "https://api.openai.com/v1";
+            
+            // Use vision-capable model
+            string m = "gpt-4o"; // GPT-4 Vision model
+            
+            // Build content array with text and images
+            var contentArray = new List<object> { new { type = "text", text = prompt } };
+            
+            foreach (var imageBase64 in base64Images)
+            {
+                contentArray.Add(new 
+                { 
+                    type = "image_url", 
+                    image_url = new 
+                    { 
+                        url = imageBase64.StartsWith("data:") ? imageBase64 : $"data:image/jpeg;base64,{imageBase64}",
+                        detail = "auto" // Let OpenAI decide the detail level
+                    } 
+                });
+            }
+
+            var url = $"{baseUrl.TrimEnd('/')}/chat/completions";
+            using var req = new HttpRequestMessage(HttpMethod.Post, url);
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            req.Content = new StringContent(JsonSerializer.Serialize(new
+            {
+                model = m,
+                messages = new[] 
+                { 
+                    new 
+                    { 
+                        role = "user", 
+                        content = contentArray 
+                    } 
+                },
+                max_tokens = 1000
+            }), Encoding.UTF8, "application/json");
+
+            using var res = await _http.SendAsync(req);
+            var json = await res.Content.ReadAsStringAsync();
+            if (!res.IsSuccessStatusCode) throw new Exception($"OpenAI Vision error: {res.StatusCode}: {json}");
+
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            var text = root.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString() ?? "";
+            int inTok = root.TryGetProperty("usage", out var usage) ? usage.GetProperty("prompt_tokens").GetInt32() : 0;
+            int outTok = root.TryGetProperty("usage", out usage) ? usage.GetProperty("completion_tokens").GetInt32() : 0;
+            return (text, m, inTok, outTok);
+        }
     }
 }

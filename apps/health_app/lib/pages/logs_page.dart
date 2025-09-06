@@ -12,28 +12,6 @@ class LogsPage extends StatelessWidget {
     return ListView(
       padding: const EdgeInsetsDirectional.fromSTEB(AppGaps.md, AppGaps.md, AppGaps.md, AppGaps.md),
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AppGaps.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(t.logsQuickActions, style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: AppGaps.xs),
-                FilledButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.logsLike)));
-                  },
-                  icon: const Icon(Icons.favorite),
-                  label: Text(t.logsLike),
-                ),
-                const SizedBox(height: AppGaps.xxs),
-                Text(t.logsLikeNote, style: TextStyle(color: cs.outline)),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: AppGaps.sm),
         Row(
           children: [
             Expanded(child: _StatCard(title: t.stepsTitle, value: '5,124', note: t.stepsNote)),

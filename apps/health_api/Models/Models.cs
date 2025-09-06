@@ -66,6 +66,36 @@ namespace health_api.Models
         public string SummaryText { get; set; } = string.Empty;
         public bool IsShared { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public List<Message> Messages { get; set; } = new();
+    }
+
+    public class Message
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid ConversationId { get; set; }
+        public Conversation? Conversation { get; set; }
+        public Guid UserId { get; set; }
+        public User? User { get; set; }
+        [Required] public string Content { get; set; } = string.Empty;
+        public string Role { get; set; } = "user"; // "user" | "assistant" | "system"
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public List<MessageAttachment> Attachments { get; set; } = new();
+    }
+
+    public class MessageAttachment
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid MessageId { get; set; }
+        public Message? Message { get; set; }
+        [Required] public string FileName { get; set; } = string.Empty;
+        [Required] public string ContentType { get; set; } = string.Empty; // "image/jpeg", "audio/mpeg", etc.
+        public string FileType { get; set; } = "image"; // "image" | "audio" | "document"
+        [Required] public string StoragePath { get; set; } = string.Empty; // Path in storage
+        public long FileSize { get; set; } // File size in bytes
+        public string? ThumbnailPath { get; set; } // For images
+        public int? DurationSeconds { get; set; } // For audio/video
+        public string? TranscriptionText { get; set; } // For audio transcription
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 
     public class ShareGrant

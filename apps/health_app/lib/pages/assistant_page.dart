@@ -3,9 +3,11 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../widgets/quota_badge.dart';
 import '../widgets/model_badge.dart';
-import '../widgets/message_bubble.dart';
+import '../widgets/message_bubble_adapter.dart';
 import '../widgets/paywall_sheet.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/simple_chat_input.dart';
+import 'dart:io';
 import '../l10n/gen/app_localizations.dart';
 
 class AssistantPage extends StatefulWidget {
@@ -20,6 +22,7 @@ class _AssistantPageState extends State<AssistantPage> {
   final ScrollController _scroll = ScrollController();
   final FocusNode _focusNode = FocusNode();
   bool _isTyping = false;
+  bool loading = false;
 
   @override
   void initState() {
@@ -195,151 +198,18 @@ class _AssistantPageState extends State<AssistantPage> {
           ),
           
           // Input area
-          Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: theme.colorScheme.shadow.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    // Attachment button
-                    Container(
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primaryContainer,
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        onPressed: () {
-                          // Handle attachment
-                        },
-                        icon: Icon(
-                          Icons.add,
-                          color: theme.colorScheme.onPrimaryContainer,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    
-                    // Input field
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceVariant,
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        child: TextField(
-                          controller: _ctrl,
-                          focusNode: _focusNode,
-                          minLines: 1,
-                          maxLines: 5,
-                          keyboardType: TextInputType.multiline,
-                          textInputAction: TextInputAction.newline,
-                          decoration: InputDecoration(
-                            hintText: t.chatInputHint,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(24),
-                              borderSide: BorderSide.none,
-                            ),
-                            filled: true,
-                            fillColor: Colors.transparent,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 10,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    
-                    // Voice/Send button
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      child: _isTyping
-                          ? Container(
-                              key: const ValueKey('send'),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                  colors: [
-                                    theme.colorScheme.primary,
-                                    theme.colorScheme.secondary,
-                                  ],
-                                ),
-                              ),
-                              child: IconButton(
-                                onPressed: _sendMessage,
-                                icon: const Icon(
-                                  Icons.send_rounded,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            )
-                          : Container(
-                              key: const ValueKey('mic'),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.secondaryContainer,
-                                shape: BoxShape.circle,
-                              ),
-                              child: GestureDetector(
-                                onLongPress: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(t.voiceHoldToTalk),
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                  );
-                                },
-                                onLongPressUp: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(t.voiceReleaseToSend),
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: IconButton(
-                                  onPressed: () {
-                                    // Handle voice tap
-                                  },
-                                  icon: Icon(
-                                    Icons.mic_none_rounded,
-                                    color: theme.colorScheme.onSecondaryContainer,
-                                  ),
-                                ),
-                              ),
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          // Multimedia chat input
+          SimpleChatInput(
+            onSendMessage: _sendMessageWithAttachments,
+            enabled: !loading,
           ),
         ],
       ),
     );
   }
 
-  Future<void> _sendMessage() async {
-    final text = _ctrl.text.trim();
-    if (text.isEmpty) return;
+  Future<void> _sendMessageWithAttachments(String text, List<File> attachments) async {
+    if (text.isEmpty && attachments.isEmpty) return;
 
     final okToAsk = context.read<AppState>().canAskNow;
     if (!okToAsk) {
@@ -347,17 +217,36 @@ class _AssistantPageState extends State<AssistantPage> {
       return;
     }
     
-    _ctrl.clear();
-    final res = await context.read<AppState>().ask(text);
+    setState(() {
+      loading = true;
+    });
     
-    if (res == AskResult.limited) {
-      await showQuotaPaywall(context);
-    } else {
-      _scroll.animateTo(
-        0,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOut,
-      );
+    try {
+      // Call the enhanced ask method with attachments
+      final res = await context.read<AppState>().askWithAttachments(text, attachments);
+      
+      if (res == AskResult.limited) {
+        await showQuotaPaywall(context);
+      } else {
+        _scroll.animateTo(
+          0,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     }
+  }
+  
+  // Keep the old method for backward compatibility
+  Future<void> _sendMessage() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty) return;
+    await _sendMessageWithAttachments(text, []);
   }
 }

@@ -94,6 +94,70 @@ class TasksPage extends StatelessWidget {
             ),
           ),
           
+          // Health Stats Cards - 2x2 Grid
+          // Cap text scaling here to keep the grid consistent
+          MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaleFactor: MediaQuery.of(context)
+                  .textScaleFactor
+                  .clamp(1.0, 1.2),
+            ),
+            child: Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _HealthStatCard(
+                        icon: Icons.directions_walk,
+                        title: t.stepsTitle,
+                        value: '5,124',
+                        unit: 'steps',
+                        color: Colors.orange,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _HealthStatCard(
+                        icon: Icons.bedtime,
+                        title: t.sleepTitle,
+                        value: '7.2',
+                        unit: 'hours',
+                        color: Colors.indigo,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _HealthStatCard(
+                        icon: Icons.favorite,
+                        title: t.bpTitle,
+                        value: '128/79',
+                        unit: 'mmHg',
+                        color: Colors.red,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _HealthStatCard(
+                        icon: Icons.timeline,
+                        title: t.hrTitle,
+                        value: '72',
+                        unit: 'bpm',
+                        color: Colors.pink,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          ),
+          
           // Tasks list
           Expanded(
             child: tasks.isEmpty
@@ -235,6 +299,96 @@ class TasksPage extends StatelessWidget {
                       );
                     },
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HealthStatCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+  final String unit;
+  final Color color;
+
+  const _HealthStatCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.unit,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    return Container(
+      // Remove fixed height to avoid overflow on larger text scales
+      // while keeping a sensible minimum for consistent layout.
+      constraints: const BoxConstraints(minHeight: 120),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            color.withOpacity(0.1),
+            color.withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Icon(icon, color: color, size: 28),
+              Text(
+                unit,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Scale down value text if space is tight to prevent overflow
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  value,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 24,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                title,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontSize: 12,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ],
           ),
         ],
       ),

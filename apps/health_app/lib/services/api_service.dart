@@ -118,7 +118,36 @@ class ApiService {
       if (model != null) 'model': model,
     };
     
-    final response = await post('/api/openai/ask', body);
+    final response = await post('/openai/ask', body);
+    
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return ApiResult.success(data['replyText'] as String);
+    } else if (response.statusCode == 429) {
+      return ApiResult.error('Daily free quota reached. Please upgrade for unlimited access.');
+    } else {
+      String message = 'Failed to get response';
+      try {
+        final error = jsonDecode(response.body);
+        message = error['message'] ?? error['error'] ?? message;
+      } catch (_) {}
+      return ApiResult.error(message);
+    }
+  }
+
+  // OpenAI Vision API integration for images
+  Future<ApiResult<String>> askWithImages(String prompt, List<String> base64Images) async {
+    if (!isAuthenticated) {
+      return ApiResult.error('Not authenticated');
+    }
+    
+    final body = {
+      'prompt': prompt,
+      'images': base64Images,
+      'model': 'gpt-4o', // Use GPT-4 Vision model
+    };
+    
+    final response = await post('/openai/ask-with-images', body);
     
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -137,7 +166,7 @@ class ApiService {
 
   // Plans API
   Future<ApiResult<List<PlanConfig>>> getPlans() async {
-    final res = await get('/api/plans');
+    final res = await get('/plans');
     if (res.statusCode >= 200 && res.statusCode < 300) {
       try {
         final data = jsonDecode(res.body);
@@ -153,6 +182,56 @@ class ApiService {
       String message = 'Failed to load plans';
       try {
         final error = jsonDecode(res.body);
+        message = error['message'] ?? error['error'] ?? message;
+      } catch (_) {}
+      return ApiResult.error(message);
+    }
+  }
+
+  // Update user plan
+  Future<ApiResult<Map<String, dynamic>>> updateUserPlan(String plan) async {
+    if (!isAuthenticated) {
+      return ApiResult.error('Not authenticated');
+    }
+    
+    final response = await put('/users/me/plan', {'plan': plan});
+    
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      try {
+        final data = jsonDecode(response.body);
+        return ApiResult.success(data);
+      } catch (e) {
+        return ApiResult.error('Failed to parse response: $e');
+      }
+    } else {
+      String message = 'Failed to update plan';
+      try {
+        final error = jsonDecode(response.body);
+        message = error['message'] ?? error['error'] ?? message;
+      } catch (_) {}
+      return ApiResult.error(message);
+    }
+  }
+
+  // Update user model tier
+  Future<ApiResult<Map<String, dynamic>>> updateUserModelTier(String modelTier) async {
+    if (!isAuthenticated) {
+      return ApiResult.error('Not authenticated');
+    }
+    
+    final response = await put('/users/me/model-tier', {'modelTier': modelTier});
+    
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      try {
+        final data = jsonDecode(response.body);
+        return ApiResult.success(data);
+      } catch (e) {
+        return ApiResult.error('Failed to parse response: $e');
+      }
+    } else {
+      String message = 'Failed to update model tier';
+      try {
+        final error = jsonDecode(response.body);
         message = error['message'] ?? error['error'] ?? message;
       } catch (_) {}
       return ApiResult.error(message);

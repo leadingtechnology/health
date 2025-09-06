@@ -39,5 +39,67 @@ namespace health_api.Controllers
             var (_, resetAt) = _quota.GetPolicy(u.Plan);
             return new QuotaInfo(limit == int.MaxValue ? int.MaxValue : limit, used, resetAt);
         }
+
+        [HttpPut("me/plan")]
+        public async Task<IActionResult> UpdatePlan([FromBody] UpdatePlanRequest request)
+        {
+            var user = await _db.Users.FindAsync(UserId);
+            if (user == null) return NotFound();
+
+            // Validate plan value
+            if (!Enum.TryParse<Plan>(request.Plan, true, out var newPlan))
+            {
+                return BadRequest(new { message = "Invalid plan value" });
+            }
+
+            // Update user's plan
+            user.Plan = newPlan;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            try
+            {
+                await _db.SaveChangesAsync();
+                return Ok(new { 
+                    message = "Plan updated successfully",
+                    plan = newPlan.ToString(),
+                    updatedAt = user.UpdatedAt
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Failed to update plan", error = ex.Message });
+            }
+        }
+
+        [HttpPut("me/model-tier")]
+        public async Task<IActionResult> UpdateModelTier([FromBody] UpdateModelTierRequest request)
+        {
+            var user = await _db.Users.FindAsync(UserId);
+            if (user == null) return NotFound();
+
+            // Validate model tier value
+            if (!Enum.TryParse<ModelTier>(request.ModelTier, true, out var newTier))
+            {
+                return BadRequest(new { message = "Invalid model tier value" });
+            }
+
+            // Update user's model tier
+            user.ModelTier = newTier;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            try
+            {
+                await _db.SaveChangesAsync();
+                return Ok(new { 
+                    message = "Model tier updated successfully",
+                    modelTier = newTier.ToString(),
+                    updatedAt = user.UpdatedAt
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Failed to update model tier", error = ex.Message });
+            }
+        }
     }
 }

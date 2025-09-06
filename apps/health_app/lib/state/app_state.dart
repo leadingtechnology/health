@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 import '../l10n/gen/app_localizations.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import 'package:http/http.dart' as http;
 
 class AppState extends ChangeNotifier {
   final ApiService _api = ApiService();
@@ -147,18 +150,50 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> setPlan(Plan p) async {
-    plan = p;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('plan', p.toString());
-    notifyListeners();
+  Future<ApiResult<Map<String, dynamic>>> setPlan(Plan p) async {
+    // If user is authenticated, update on server
+    if (isAuthenticated) {
+      final result = await _api.updateUserPlan(p.name);
+      if (result.success) {
+        plan = p;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('plan', p.toString());
+        notifyListeners();
+        return ApiResult.success(result.data!);
+      } else {
+        return ApiResult.error(result.error ?? 'Failed to update plan');
+      }
+    } else {
+      // For development/offline mode, just update locally
+      plan = p;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('plan', p.toString());
+      notifyListeners();
+      return ApiResult.success({'message': 'Plan updated locally'});
+    }
   }
 
-  Future<void> setModelTier(ModelTier t) async {
-    modelTier = t;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('tier', t.toString());
-    notifyListeners();
+  Future<ApiResult<Map<String, dynamic>>> setModelTier(ModelTier t) async {
+    // If user is authenticated, update on server
+    if (isAuthenticated) {
+      final result = await _api.updateUserModelTier(t.name);
+      if (result.success) {
+        modelTier = t;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('tier', t.toString());
+        notifyListeners();
+        return ApiResult.success(result.data!);
+      } else {
+        return ApiResult.error(result.error ?? 'Failed to update model tier');
+      }
+    } else {
+      // For development/offline mode, just update locally
+      modelTier = t;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('tier', t.toString());
+      notifyListeners();
+      return ApiResult.success({'message': 'Model tier updated locally'});
+    }
   }
 
   Future<void> setTextScale(double scale) async {
@@ -331,6 +366,101 @@ class AppState extends ChangeNotifier {
         actions: const [],
       ));
       
+      notifyListeners();
+      return result.error?.contains('quota') ?? false ? AskResult.limited : AskResult.ok;
+    }
+  }
+
+  // Enhanced ask method with attachments support
+  Future<AskResult> askWithAttachments(String text, List<File> attachments) async {
+    resetIfNewDay();
+    
+    // Check quota for free plan
+    if (plan == Plan.free && usedToday >= dailyLimitFree) {
+      messages.add(Message(
+        id: UniqueKey().toString(),
+        fromUser: false,
+        time: DateTime.now(),
+        text: '您今天的免费提问次数已用完。升级到付费计划可获得无限提问。',
+        actions: const [],
+      ));
+      notifyListeners();
+      return AskResult.limited;
+    }
+    
+    // Prepare the message with attachments info
+    String enhancedText = text;
+    List<String> base64Images = [];
+    
+    // Process attachments
+    for (var file in attachments) {
+      final fileName = file.path.split('/').last;
+      final isImage = fileName.toLowerCase().endsWith('.jpg') || 
+                      fileName.toLowerCase().endsWith('.jpeg') || 
+                      fileName.toLowerCase().endsWith('.png');
+      
+      if (isImage) {
+        try {
+          final bytes = await file.readAsBytes();
+          final base64 = base64Encode(bytes);
+          base64Images.add('data:image/jpeg;base64,$base64');
+        } catch (e) {
+          debugPrint('Error encoding image: $e');
+        }
+      }
+    }
+    
+    // Add user message with attachment indicator
+    messages.add(Message(
+      id: UniqueKey().toString(),
+      fromUser: true,
+      time: DateTime.now(),
+      text: attachments.isNotEmpty 
+        ? "$text\n[${attachments.length}个附件]" 
+        : text,
+      actions: const [],
+    ));
+    notifyListeners();
+    
+    // Call API with enhanced prompt for vision
+    final ApiResult<String> result;
+    
+    if (base64Images.isNotEmpty) {
+      // Use vision-capable model for images
+      result = await _api.askWithImages(text, base64Images);
+    } else {
+      // Regular text query
+      result = await _api.askOpenAI(text);
+    }
+    
+    if (result.success) {
+      // Update usage for free plan
+      if (plan == Plan.free) {
+        usedToday++;
+        _persist();
+      }
+      
+      // Add AI response
+      messages.add(Message(
+        id: UniqueKey().toString(),
+        fromUser: false,
+        time: DateTime.now(),
+        text: result.data ?? 'No response',
+        actions: const ['set_task', 'export_pdf', 'share'],
+      ));
+      notifyListeners();
+      return AskResult.ok;
+    } else {
+      // Error handling
+      String errorMessage = result.error ?? 'Unknown error';
+      
+      messages.add(Message(
+        id: UniqueKey().toString(),
+        fromUser: false,
+        time: DateTime.now(),
+        text: '抱歉，处理您的请求时出错：$errorMessage',
+        actions: const [],
+      ));
       notifyListeners();
       return result.error?.contains('quota') ?? false ? AskResult.limited : AskResult.ok;
     }

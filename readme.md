@@ -26,6 +26,8 @@ SET app.env = 'dev';
 \i D:/ldtech/health/health/Database/health_postgres.sql
 \i D:/ldtech/health/health/Database/fix_citext_enable.sql
 \i D:/ldtech/health/health/Database/migration_add_platinum_plan.sql
+\i D:/ldtech/health/health/Database/add_multimedia_support.sql
+
 
 ### 1）查看数据库
 

@@ -97,7 +97,10 @@
       "Bash(dir:*)",
       "Bash(flutter gen-l10n:*)",
       "Bash(taskkill:*)",
-      "Bash(tasklist)"
+      "Bash(tasklist)",
+      "Bash(flutter build:*)",
+      "Bash(flutter:*)",
+      "Bash(dart analyze:*)"
     ],
     "deny": [],
     "ask": []

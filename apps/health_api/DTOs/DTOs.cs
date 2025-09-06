@@ -28,8 +28,12 @@ namespace health_api.DTOs
 
     public record OpenAIKeyUpsertRequest([Required] string KeyName, [Required] string ApiKeyPlain);
     public record OpenAIAskRequest([Required] string Prompt, string? Model);
+    public record OpenAIAskWithImagesRequest([Required] string Prompt, [Required] List<string> Images, string? Model);
     public record OpenAIAskResponse(string ReplyText, string ModelUsed, int TokensInput, int TokensOutput);
 
     public record TaskUpsertRequest([Required] string Title, [Required] DateTime DueAt, Guid? PatientId, string? Notes, string? Category);
     public record TaskResponse(Guid Id, string Title, DateTime DueAt, Guid? PatientId, string? Notes, string? Category, bool IsDone, DateTime CreatedAt);
+
+    public record UpdatePlanRequest([Required] string Plan);
+    public record UpdateModelTierRequest([Required] string ModelTier);
 }
